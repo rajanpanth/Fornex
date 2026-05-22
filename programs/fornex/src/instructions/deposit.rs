@@ -3,36 +3,21 @@ use anchor_lang::system_program;
 use crate::state::{Vault, UserDeposit};
 use crate::errors::FornexError;
 
-/// User deposits SOL into the vault and receives proportional shares.
-///
-/// Share calculation:
-///   - First depositor: shares = deposit amount (1:1)
-///   - Subsequent: shares = (deposit * total_shares) / vault_nav
-///
-/// Example: vault has 10 SOL NAV, 10 shares. You deposit 2 SOL.
-///   → You get (2 * 10) / 10 = 2 shares
-///   → Now vault has 12 SOL, 12 shares. Your 2 shares = 16.67% of vault.
 pub fn handler(ctx: Context<Deposit>, amount: u64) -> Result<()> {
     require!(amount > 0, FornexError::ZeroDeposit);
 
-    let vault = &mut ctx.accounts.vault;
-    let user_deposit = &mut ctx.accounts.user_deposit;
     let clock = Clock::get()?;
 
-    // Calculate shares to mint for this deposit
-    let shares_to_mint = if vault.total_shares == 0 {
-        // First depositor gets 1:1 shares
+    let shares_to_mint = if ctx.accounts.vault.total_shares == 0 {
         amount
     } else {
-        // Proportional shares based on current NAV
         (amount as u128)
-            .checked_mul(vault.total_shares as u128)
+            .checked_mul(ctx.accounts.vault.total_shares as u128)
             .ok_or(FornexError::MathOverflow)?
-            .checked_div(vault.nav as u128)
+            .checked_div(ctx.accounts.vault.nav as u128)
             .ok_or(FornexError::ZeroNav)? as u64
     };
 
-    // Transfer SOL from user to vault PDA
     system_program::transfer(
         CpiContext::new(
             ctx.accounts.system_program.to_account_info(),
@@ -44,7 +29,9 @@ pub fn handler(ctx: Context<Deposit>, amount: u64) -> Result<()> {
         amount,
     )?;
 
-    // Update vault state
+    let vault = &mut ctx.accounts.vault;
+    let user_deposit = &mut ctx.accounts.user_deposit;
+
     vault.total_deposits = vault.total_deposits
         .checked_add(amount)
         .ok_or(FornexError::MathOverflow)?;
@@ -55,9 +42,7 @@ pub fn handler(ctx: Context<Deposit>, amount: u64) -> Result<()> {
         .checked_add(amount)
         .ok_or(FornexError::MathOverflow)?;
 
-    // Update user deposit record
     if user_deposit.deposited_at == 0 {
-        // First time depositing
         user_deposit.owner = ctx.accounts.user.key();
         user_deposit.vault = ctx.accounts.vault.key();
         user_deposit.deposited_at = clock.unix_timestamp;

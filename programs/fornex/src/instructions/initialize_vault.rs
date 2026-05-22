@@ -1,8 +1,6 @@
 use anchor_lang::prelude::*;
 use crate::state::Vault;
 
-/// Creates the Fornex vault. Called once during setup.
-/// The agent_authority is the AI agent's wallet that will execute trades.
 pub fn handler(ctx: Context<InitializeVault>, agent_authority: Pubkey) -> Result<()> {
     let vault = &mut ctx.accounts.vault;
     let clock = Clock::get()?;
@@ -14,6 +12,7 @@ pub fn handler(ctx: Context<InitializeVault>, agent_authority: Pubkey) -> Result
     vault.nav = 0;
     vault.trade_count = 0;
     vault.winning_trades = 0;
+    vault.is_trading_paused = false;
     vault.created_at = clock.unix_timestamp;
     vault.bump = ctx.bumps.vault;
 

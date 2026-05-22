@@ -20,7 +20,7 @@ pub enum FornexError {
     #[msg("Leverage must be between 1 and 10")]
     InvalidLeverage,
 
-    #[msg("Direction must be 0 (Long), 1 (Short), 2 (Close), or 3 (Flat)")]
+    #[msg("Direction must be 0 (Flat), 1 (Long), 2 (Short), or 3 (Close)")]
     InvalidDirection,
 
     #[msg("Market name is too long (max 16 characters)")]
@@ -28,6 +28,12 @@ pub enum FornexError {
 
     #[msg("Reasoning text is too long (max 512 characters)")]
     ReasoningTooLong,
+
+    #[msg("Agent reasoning text is too long (max 200 characters)")]
+    AgentReasoningTooLong,
+
+    #[msg("Execution reference is too long (max 88 characters)")]
+    ExecutionRefTooLong,
 
     #[msg("Arithmetic overflow occurred")]
     MathOverflow,

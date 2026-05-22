@@ -2,39 +2,29 @@ use anchor_lang::prelude::*;
 use crate::state::{Vault, TradeLog};
 use crate::errors::FornexError;
 
-/// AI agent logs a trade decision on-chain.
-/// This is the transparency layer — the "AI reasoning feed" in the frontend
-/// reads directly from these on-chain logs.
-///
-/// Only the vault's agent_authority can call this.
-/// Each trade creates a new TradeLog PDA with a unique index.
 pub fn handler(
     ctx: Context<LogTrade>,
-    market: String,
+    market: [u8; 16],
     direction: u8,
     size_usd: u64,
     leverage: u8,
     confidence: u8,
-    reasoning: String,
+    reasoning: [u8; 512],
 ) -> Result<()> {
-    // Validate inputs
     require!(direction <= 3, FornexError::InvalidDirection);
     require!(leverage >= 1 && leverage <= 10, FornexError::InvalidLeverage);
     require!(confidence <= 100, FornexError::InvalidConfidence);
-    require!(market.len() <= 16, FornexError::MarketNameTooLong);
-    require!(reasoning.len() <= 512, FornexError::ReasoningTooLong);
 
+    let vault_key = ctx.accounts.vault.key();
     let vault = &mut ctx.accounts.vault;
     let trade_log = &mut ctx.accounts.trade_log;
     let clock = Clock::get()?;
 
-    // Increment trade count
     vault.trade_count = vault.trade_count
         .checked_add(1)
         .ok_or(FornexError::MathOverflow)?;
 
-    // Fill in the trade log
-    trade_log.vault = ctx.accounts.vault.key();
+    trade_log.vault = vault_key;
     trade_log.trade_index = vault.trade_count;
     trade_log.market = market;
     trade_log.direction = direction;
@@ -42,14 +32,14 @@ pub fn handler(
     trade_log.leverage = leverage;
     trade_log.confidence = confidence;
     trade_log.reasoning = reasoning;
-    trade_log.pnl_lamports = 0; // Set later when position closes
+    trade_log.pnl_lamports = 0;
     trade_log.timestamp = clock.unix_timestamp;
     trade_log.bump = ctx.bumps.trade_log;
 
     let dir_label = match direction {
-        0 => "LONG",
-        1 => "SHORT",
-        2 => "CLOSE",
+        1 => "LONG",
+        2 => "SHORT",
+        3 => "CLOSE",
         _ => "FLAT",
     };
 
@@ -57,13 +47,18 @@ pub fn handler(
         "Trade #{}: {} {} | {}x | Confidence: {}% | {}",
         vault.trade_count,
         dir_label,
-        trade_log.market,
+        display_bytes(&trade_log.market),
         leverage,
         confidence,
-        trade_log.reasoning
+        display_bytes(&trade_log.reasoning)
     );
 
     Ok(())
+}
+
+fn display_bytes(bytes: &[u8]) -> String {
+    let len = bytes.iter().position(|byte| *byte == 0).unwrap_or(bytes.len());
+    String::from_utf8_lossy(&bytes[..len]).to_string()
 }
 
 #[derive(Accounts)]
@@ -72,7 +67,6 @@ pub struct LogTrade<'info> {
         mut,
         seeds = [b"vault"],
         bump = vault.bump,
-        // CRITICAL: Only the AI agent can log trades
         constraint = vault.agent_authority == agent.key() @ FornexError::UnauthorizedAgent
     )]
     pub vault: Account<'info, Vault>,
