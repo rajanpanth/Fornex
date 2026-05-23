@@ -9,6 +9,10 @@ const nextConfig = {
         fullySpecified: false,
       },
     });
+    // Suppress dynamic-require warnings from ox / @drift-labs/sdk
+    config.ignoreWarnings = [
+      /Critical dependency: the request of a dependency is an expression/,
+    ];
     return config;
   },
 };
