@@ -1,4 +1,6 @@
-import "dotenv/config";
+import * as path from "path";
+import * as dotenv from "dotenv";
+dotenv.config({ path: path.join(__dirname, "..", ".env") });
 import bs58 from "bs58";
 import { Connection, Keypair, PublicKey } from "@solana/web3.js";
 

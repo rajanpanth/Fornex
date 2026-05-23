@@ -13,7 +13,7 @@
   <br />
   <em>Three AI agents debate every trade. Every vote and reasoning is stored permanently on-chain.</em>
   <br /><br />
-  <code>Program ID: G9rWuMYMbhVSEavQrEUPAwWGT5xewZEibDBkoWQzTEfw</code>
+  <code>Program ID: H6vbfTp6XwfFSHWtpzjZuyrx6bpnp8Rwt6bVZAUT6vZf</code>
 </p>
 
 ---
@@ -287,7 +287,7 @@ cp agent/.env.example agent/.env
 #   AZURE_OPENAI_DEPLOYMENT=gpt-4o
 #   AGENT_KEYPAIR=your-base58-secret-key
 #   VAULT_ADDRESS=your-vault-address
-#   VAULT_PROGRAM_ID=G9rWuMYMbhVSEavQrEUPAwWGT5xewZEibDBkoWQzTEfw
+#   VAULT_PROGRAM_ID=H6vbfTp6XwfFSHWtpzjZuyrx6bpnp8Rwt6bVZAUT6vZf
 
 npm run agent
 ```
@@ -398,7 +398,23 @@ fornex/
 
 ---
 
-## 📄 License
+## � Live Proof (Devnet)
+
+Fornex is deployed and running on Solana Devnet. The AI agent cycles every 15 minutes and logs every decision permanently on-chain.
+
+| Item | Link |
+|:---|:---|
+| **Program** | [H6vbfTp6XwfFSHWtpzjZuyrx6bpnp8Rwt6bVZAUT6vZf](https://explorer.solana.com/address/H6vbfTp6XwfFSHWtpzjZuyrx6bpnp8Rwt6bVZAUT6vZf?cluster=devnet) |
+| **Vault PDA** | [HMkL7zzAroE919esVY6HSMYzB2ejHM5m4A8JKCSrgBXR](https://explorer.solana.com/address/HMkL7zzAroE919esVY6HSMYzB2ejHM5m4A8JKCSrgBXR?cluster=devnet) |
+| **Decision Log #1** | [2fAmjTj9WLyNhCuow4YBCAGdDRynqSCGgrpQQcdAHHSijcV7JQsEQcEcycNgiCUT2WSPTFZ1Nx5q7CbJX1aMLN6X](https://explorer.solana.com/tx/2fAmjTj9WLyNhCuow4YBCAGdDRynqSCGgrpQQcdAHHSijcV7JQsEQcEcycNgiCUT2WSPTFZ1Nx5q7CbJX1aMLN6X?cluster=devnet) |
+| **NAV Update #1** | [5VR1pg4ZGtkELaDMPugz7y4sS2miiKhP3mqvkb5TDv1Q3pnS5wEVUpRPVBYdt9h4YCcd7TMxSwuZM4JV79nYB3Ty](https://explorer.solana.com/tx/5VR1pg4ZGtkELaDMPugz7y4sS2miiKhP3mqvkb5TDv1Q3pnS5wEVUpRPVBYdt9h4YCcd7TMxSwuZM4JV79nYB3Ty?cluster=devnet) |
+| **Decision Log #2** | [37ouG2GkzqTkZbCbA6J8oepFTdKZS2rRNLVKyQcSP8Yz2fc5a5uj7Y6AFHrwgPpdnyfdMbCRkab3NuGLg4ws5TRr](https://explorer.solana.com/tx/37ouG2GkzqTkZbCbA6J8oepFTdKZS2rRNLVKyQcSP8Yz2fc5a5uj7Y6AFHrwgPpdnyfdMbCRkab3NuGLg4ws5TRr?cluster=devnet) |
+
+> The agent is currently running continuously via `pm2`. New decision accounts are written every 15 minutes.
+
+---
+
+## �📄 License
 
 This project is licensed under the **MIT License** — see the [LICENSE](LICENSE) file for details.
 

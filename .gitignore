@@ -5,6 +5,7 @@ target
 node_modules
 test-ledger
 .yarn
-.env*
-.next
+.env
+.env.local
 agent/.env
+.next
