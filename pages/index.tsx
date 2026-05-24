@@ -1,879 +1,444 @@
-﻿import { useConnection, useWallet } from "@solana/wallet-adapter-react";
-import { WalletMultiButton } from "@solana/wallet-adapter-react-ui";
+import Head from "next/head";
+import Link from "next/link";
+import { useEffect, useRef, useState } from "react";
+import { motion, useMotionValue, useSpring, useTransform } from "framer-motion";
 import {
-  LAMPORTS_PER_SOL,
-  PublicKey,
-  SystemProgram,
-  Transaction,
-  TransactionInstruction,
-} from "@solana/web3.js";
-import { Buffer } from "buffer";
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import {
-  Area,
-  AreaChart,
-  CartesianGrid,
-  ResponsiveContainer,
-  Tooltip,
-  XAxis,
-  YAxis,
-} from "recharts";
+  ArrowRight,
+  Bot,
+  BrainCircuit,
+  CandlestickChart,
+  CheckCircle2,
+  Cpu,
+  DatabaseZap,
+  GitBranch,
+  LockKeyhole,
+  RadioTower,
+  ShieldCheck,
+  Sparkles,
+  WalletCards,
+} from "lucide-react";
 
-/* ── Constants ──────────────────────────────────────────── */
-const PROGRAM_ID = new PublicKey(
-  process.env.NEXT_PUBLIC_VAULT_PROGRAM_ID ||
-    "G9rWuMYMbhVSEavQrEUPAwWGT5xewZEibDBkoWQzTEfw"
-);
-const VAULT_ADDRESS = new PublicKey(
-  process.env.NEXT_PUBLIC_VAULT_ADDRESS || PublicKey.default.toBase58()
-);
+const stats = [
+  ["3", "Specialized agents"],
+  ["24/7", "Autonomous execution"],
+  ["100%", "On-chain decisions"],
+  ["0", "Custody assumptions"],
+];
 
-/* ── Types ──────────────────────────────────────────────── */
-type Decision = {
-  pubkey: PublicKey;
-  decisionIndex: number;
-  market: string;
-  bullVote: Vote;
-  bearVote: Vote;
-  zenVote: Vote;
-  consensus: Vote;
-  sizeUsd: number;
-  executed: boolean;
-  executionRef: string;
-  timestamp: number;
-};
+const agents = [
+  {
+    name: "BULL",
+    tone: "Momentum hunter",
+    signal: "LONG SOL-PERP",
+    confidence: "78%",
+    copy: "Reads funding compression, open interest expansion, and support retests before proposing risk-on entries.",
+  },
+  {
+    name: "BEAR",
+    tone: "Risk sentinel",
+    signal: "WAIT",
+    confidence: "61%",
+    copy: "Challenges crowded trades with liquidation maps, volatility bands, and rejection zones.",
+  },
+  {
+    name: "ZEN",
+    tone: "Portfolio governor",
+    signal: "SIZE 1.5x",
+    confidence: "72%",
+    copy: "Balances conviction with drawdown limits, vault exposure, and market regime context.",
+  },
+];
 
-type Vote = {
-  direction: number;
-  leverage: number;
-  confidence: number;
-  reasoning: string;
-};
+const systems = [
+  ["Decision Debate", "Three agents argue every setup before execution.", BrainCircuit],
+  ["Drift Execution", "Perp orders route through a constrained strategy executor.", CandlestickChart],
+  ["Solana Proof", "Trade intent, votes, and consensus are written on-chain.", DatabaseZap],
+  ["Vault Controls", "Deposits stay transparent with no hidden discretionary layer.", ShieldCheck],
+];
 
-type Toast = {
-  id: string;
-  type: "success" | "error";
-  title: string;
-  body: string;
-};
+const timeline = [
+  ["01", "Ingest", "Funding, OI, volatility, price action, and vault state stream into the agent brain."],
+  ["02", "Debate", "BULL, BEAR, and ZEN produce competing recommendations with confidence scores."],
+  ["03", "Govern", "Risk checks clamp leverage, position size, and drawdown exposure before any order."],
+  ["04", "Prove", "Consensus and execution evidence are published for investors to audit forever."],
+];
 
-/* ── Main Component ─────────────────────────────────────── */
-export default function Home() {
-  const { connection } = useConnection();
-  const wallet = useWallet();
+function MagneticLink({
+  href,
+  children,
+  className,
+}: {
+  href: string;
+  children: React.ReactNode;
+  className: string;
+}) {
+  const x = useMotionValue(0);
+  const y = useMotionValue(0);
+  const springX = useSpring(x, { stiffness: 180, damping: 18, mass: 0.35 });
+  const springY = useSpring(y, { stiffness: 180, damping: 18, mass: 0.35 });
 
-  const [vault, setVault] = useState<any | null>(null);
-  const [userDeposit, setUserDeposit] = useState<{
-    shares: bigint;
-    totalDeposited: bigint;
-  } | null>(null);
-  const [decisions, setDecisions] = useState<Decision[]>([]);
-  const [tab, setTab] = useState<"deposit" | "withdraw">("deposit");
-  const [amount, setAmount] = useState("0.1");
-  const [loading, setLoading] = useState(false);
-  const [range, setRange] = useState<"24h" | "all">("24h");
-  const [mounted, setMounted] = useState(false);
-  const [toasts, setToasts] = useState<Toast[]>([]);
-  const [solPrice, setSolPrice] = useState({ price: 0, change: 0 });
-  const [cycleProgress, setCycleProgress] = useState(0);
-  const [displayedEarnings, setDisplayedEarnings] = useState(0);
-  const earningsAnimRef = useRef<number | null>(null);
-
-  useEffect(() => {
-    setMounted(true);
-  }, []);
-
-  /* ── SOL price fetch ── */
-  useEffect(() => {
-    const fetchPrice = async () => {
-      try {
-        const res = await fetch(
-          "https://api.coingecko.com/api/v3/simple/price?ids=solana&vs_currencies=usd&include_24hr_change=true"
-        );
-        const data = await res.json();
-        setSolPrice({
-          price: data.solana.usd,
-          change: data.solana.usd_24h_change,
-        });
-      } catch {
-        /* silently fail on price fetch errors */
-      }
-    };
-    void fetchPrice();
-    const id = setInterval(fetchPrice, 60_000);
-    return () => clearInterval(id);
-  }, []);
-
-  /* ── Cycle progress (15-min timer) ── */
-  useEffect(() => {
-    const tick = () => {
-      const CYCLE = 15 * 60 * 1000;
-      setCycleProgress((Date.now() % CYCLE) / CYCLE);
-    };
-    tick();
-    const id = setInterval(tick, 1000);
-    return () => clearInterval(id);
-  }, []);
-
-  /* ── Agent earnings counter animation ── */
-  const targetEarnings = useMemo(
-    () => (vault?.tradeCount || 0) * 0.001,
-    [vault]
-  );
-
-  useEffect(() => {
-    if (earningsAnimRef.current) cancelAnimationFrame(earningsAnimRef.current);
-    const start = displayedEarnings;
-    const end = targetEarnings;
-    const duration = 600;
-    const startTime = performance.now();
-    const animate = (now: number) => {
-      const elapsed = now - startTime;
-      const progress = Math.min(elapsed / duration, 1);
-      const eased = 1 - Math.pow(1 - progress, 3);
-      setDisplayedEarnings(start + (end - start) * eased);
-      if (progress < 1) earningsAnimRef.current = requestAnimationFrame(animate);
-    };
-    earningsAnimRef.current = requestAnimationFrame(animate);
-    return () => {
-      if (earningsAnimRef.current) cancelAnimationFrame(earningsAnimRef.current);
-    };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [targetEarnings]);
-
-  /* ── Toast helpers ── */
-  const addToast = useCallback((type: "success" | "error", title: string, body: string) => {
-    const id = Math.random().toString(36).slice(2);
-    setToasts((prev) => [...prev, { id, type, title, body }]);
-    setTimeout(() => {
-      setToasts((prev) => prev.filter((t) => t.id !== id));
-    }, 5000);
-  }, []);
-
-  /* ── Chain data refresh ── */
-  const refresh = useCallback(async () => {
-    const vaultInfo = await connection.getAccountInfo(VAULT_ADDRESS);
-    if (vaultInfo) setVault(decodeVault(vaultInfo.data));
-
-    const accounts = await connection.getProgramAccounts(PROGRAM_ID, {
-      filters: [
-        {
-          dataSize:
-            8 + 32 + 4 + 16 + 4 * 203 + 8 + 1 + 88 + 8 + 8 + 1,
-        },
-      ],
-    });
-    const parsed = accounts
-      .map((a) => decodeDecision(a.pubkey, a.account.data))
-      .filter(Boolean)
-      .sort((a, b) => b!.decisionIndex - a!.decisionIndex)
-      .slice(0, 12) as Decision[];
-    setDecisions(parsed);
-  }, [connection]);
-
-  /* ── User deposit account ── */
-  useEffect(() => {
-    if (!wallet.publicKey) {
-      setUserDeposit(null);
-      return;
-    }
-    const [pda] = PublicKey.findProgramAddressSync(
-      [
-        Buffer.from("user_deposit"),
-        VAULT_ADDRESS.toBuffer(),
-        wallet.publicKey.toBuffer(),
-      ],
-      PROGRAM_ID
-    );
-    connection
-      .getAccountInfo(pda)
-      .then((info) => {
-        if (!info) {
-          setUserDeposit(null);
-          return;
-        }
-        const d = Buffer.from(info.data);
-        const shares = d.readBigUInt64LE(8 + 32 + 32);
-        const totalDeposited = d.readBigUInt64LE(8 + 32 + 32 + 8);
-        setUserDeposit({ shares, totalDeposited });
-      })
-      .catch(() => setUserDeposit(null));
-  }, [wallet.publicKey, connection]);
-
-  useEffect(() => {
-    void refresh();
-    const id = setInterval(() => void refresh(), 30_000);
-    return () => clearInterval(id);
-  }, [refresh]);
-
-  /* ── Chart data ── */
-  const chartData = useMemo(() => {
-    const base = vault ? Number(vault.nav) / LAMPORTS_PER_SOL : 10;
-    const points = range === "24h" ? 24 : 36;
-    const now = Date.now();
-    return Array.from({ length: points }, (_, i) => {
-      const ts = new Date(now - (points - i) * (range === "24h" ? 3600_000 : 7200_000));
-      const hh = ts.getHours().toString().padStart(2, "0");
-      const mm = ts.getMinutes().toString().padStart(2, "0");
-      return {
-        t: `${hh}:${mm}`,
-        nav: Number((base * (0.98 + i / (points * 35))).toFixed(4)),
-      };
-    });
-  }, [range, vault]);
-
-  /* ── Derived stats ── */
-  const userSharesSol = useMemo(() => {
-    if (!userDeposit || !vault || Number(vault.totalShares) === 0) return 0;
-    return (
-      (Number(userDeposit.shares) / Number(vault.totalShares)) *
-      (Number(vault.nav) / LAMPORTS_PER_SOL)
-    );
-  }, [userDeposit, vault]);
-
-  const userPnlPct = useMemo(() => {
-    if (!userDeposit || Number(userDeposit.totalDeposited) === 0) return null;
-    const deposited = Number(userDeposit.totalDeposited) / LAMPORTS_PER_SOL;
-    return ((userSharesSol - deposited) / deposited) * 100;
-  }, [userDeposit, userSharesSol]);
-
-  const stats = {
-    nav: vault ? Number(vault.nav) / LAMPORTS_PER_SOL : 0,
-    trades: vault?.tradeCount || 0,
-    winRate:
-      vault?.tradeCount > 0
-        ? Math.round((vault.winningTrades / vault.tradeCount) * 100)
-        : 0,
-  };
-
-  /* ── Vault instruction ── */
-  async function sendVaultIx(kind: "deposit" | "withdraw") {
-    if (!wallet.publicKey || !wallet.signTransaction) return;
-    setLoading(true);
-    try {
-      const lamports = Math.round(Number(amount) * LAMPORTS_PER_SOL);
-      const [userDepositPda] = PublicKey.findProgramAddressSync(
-        [
-          Buffer.from("user_deposit"),
-          VAULT_ADDRESS.toBuffer(),
-          wallet.publicKey.toBuffer(),
-        ],
-        PROGRAM_ID
-      );
-      const data = Buffer.concat([
-        await discriminator("global", kind),
-        u64(BigInt(lamports)),
-      ]);
-      const ix = new TransactionInstruction({
-        programId: PROGRAM_ID,
-        keys: [
-          writable(VAULT_ADDRESS),
-          writable(userDepositPda),
-          signer(wallet.publicKey),
-          readonly(SystemProgram.programId),
-        ],
-        data,
-      });
-      const tx = new Transaction().add(ix);
-      tx.feePayer = wallet.publicKey;
-      tx.recentBlockhash = (await connection.getLatestBlockhash()).blockhash;
-      const signed = await wallet.signTransaction(tx);
-      const sig = await connection.sendRawTransaction(signed.serialize());
-      await connection.confirmTransaction(sig, "confirmed");
-      addToast(
-        "success",
-        `${kind === "deposit" ? "Deposit" : "Withdrawal"} confirmed`,
-        `${sig.slice(0, 8)}…${sig.slice(-8)}`
-      );
-      await refresh();
-    } catch (err: any) {
-      addToast("error", "Transaction failed", err?.message || String(err));
-    } finally {
-      setLoading(false);
-    }
-  }
-
-  const minsLeft = Math.floor((1 - cycleProgress) * 15);
-  const secsLeft = Math.floor(((1 - cycleProgress) * 15 * 60) % 60);
-
-  /* ── Render ── */
   return (
-    <div className="terminal">
-      {/* TOPBAR */}
-      <header className="topbar">
-        <span className="topbar-logo">Fornex</span>
-        <span className="topbar-divider" />
+    <motion.div
+      style={{ x: springX, y: springY }}
+      onMouseMove={(event) => {
+        const rect = event.currentTarget.getBoundingClientRect();
+        x.set((event.clientX - rect.left - rect.width / 2) * 0.16);
+        y.set((event.clientY - rect.top - rect.height / 2) * 0.22);
+      }}
+      onMouseLeave={() => {
+        x.set(0);
+        y.set(0);
+      }}
+    >
+      <Link href={href} className={className}>
+        {children}
+      </Link>
+    </motion.div>
+  );
+}
 
-        <div className="topbar-sol">
-          <span className="topbar-sol-ticker">SOL</span>
-          <span className="topbar-sol-price">
-            {solPrice.price > 0 ? `$${solPrice.price.toFixed(2)}` : "—"}
-          </span>
-          {solPrice.price > 0 && (
-            <span className={`price-pill ${solPrice.change >= 0 ? "up" : "down"}`}>
-              {solPrice.change >= 0 ? "+" : ""}
-              {solPrice.change.toFixed(1)}%
-            </span>
-          )}
-        </div>
+function StageBackground() {
+  const mouseX = useMotionValue(0.5);
+  const mouseY = useMotionValue(0.35);
+  const beamX = useTransform(mouseX, [0, 1], ["-16%", "16%"]);
+  const beamY = useTransform(mouseY, [0, 1], ["-10%", "12%"]);
 
-        <div className="topbar-center">
-          <div className="live-indicator">
-            <span className="live-dot" />
-            LIVE
-          </div>
-        </div>
+  useEffect(() => {
+    const move = (event: MouseEvent) => {
+      mouseX.set(event.clientX / window.innerWidth);
+      mouseY.set(event.clientY / window.innerHeight);
+    };
+    window.addEventListener("mousemove", move);
+    return () => window.removeEventListener("mousemove", move);
+  }, [mouseX, mouseY]);
 
-        <div className="topbar-right">
-          <span className="badge-devnet">Devnet</span>
-          {mounted && <WalletMultiButton />}
-        </div>
-      </header>
+  return (
+    <div className="cinema-stage" aria-hidden="true">
+      <motion.div className="cinema-beam" style={{ x: beamX, y: beamY }} />
+      <div className="cinema-grid" />
+      <div className="cinema-vignette" />
+      <div className="cinema-scanline" />
+    </div>
+  );
+}
 
-      {/* STATS ROW */}
-      <div className="stats-row">
-        <StatCard
-          label="Vault Value"
-          value={`${stats.nav.toFixed(3)} SOL`}
-          change={`${stats.trades} total trades`}
-        />
-        <StatCard
-          label="Your Shares"
-          value={wallet.publicKey ? userSharesSol.toFixed(4) : "—"}
-          change={
-            wallet.publicKey
-              ? userDeposit
-                ? `≈ ${userSharesSol.toFixed(3)} SOL current value`
-                : "No deposit yet"
-              : "Connect wallet"
-          }
-        />
-        <StatCard
-          label="Your P&L"
-          value={
-            userPnlPct !== null
-              ? `${userPnlPct >= 0 ? "+" : ""}${userPnlPct.toFixed(2)}%`
-              : "—"
-          }
-          change={
-            userPnlPct !== null && userDeposit
-              ? `${userPnlPct >= 0 ? "+" : ""}${(
-                  userSharesSol -
-                  Number(userDeposit.totalDeposited) / LAMPORTS_PER_SOL
-                ).toFixed(4)} SOL since deposit`
-              : "Since deposit"
-          }
-          positive={userPnlPct !== null && userPnlPct >= 0}
-          negative={userPnlPct !== null && userPnlPct < 0}
-        />
-        <StatCard
-          label="Agent Record"
-          value={`${stats.winRate}%`}
-          change={`${stats.trades} trades  |  ${vault?.winningTrades || 0} wins`}
-          positive={stats.winRate >= 50}
-        />
+function CodeWindow() {
+  return (
+    <motion.div
+      className="terminal-window hero-terminal"
+      whileHover={{ y: -10, rotateX: 2, rotateY: -3 }}
+      transition={{ type: "spring", stiffness: 180, damping: 18 }}
+    >
+      <div className="terminal-top">
+        <span />
+        <span />
+        <span />
+        <strong>fornex.agent.ts</strong>
       </div>
-
-      {/* BODY — two columns */}
       <div className="terminal-body">
-        {/* LEFT COLUMN */}
-        <div className="left-col">
-          {/* Equity Curve */}
-          <div className="chart-section">
-            <div className="section-header">
-              <span className="section-label">Equity Curve</span>
-              <div className="range-toggle">
-                <button
-                  className={`range-btn${range === "24h" ? " active" : ""}`}
-                  onClick={() => setRange("24h")}
-                >
-                  24H
-                </button>
-                <button
-                  className={`range-btn${range === "all" ? " active" : ""}`}
-                  onClick={() => setRange("all")}
-                >
-                  ALL
-                </button>
-              </div>
-            </div>
-            <div className="chart-wrap">
-              <ResponsiveContainer width="100%" height="100%">
-                <AreaChart
-                  data={chartData}
-                  margin={{ top: 4, right: 8, bottom: 0, left: 0 }}
-                >
-                  <defs>
-                    <linearGradient id="navGrad" x1="0" y1="0" x2="0" y2="1">
-                      <stop
-                        offset="5%"
-                        stopColor="#00d68f"
-                        stopOpacity={0.15}
-                      />
-                      <stop
-                        offset="95%"
-                        stopColor="#00d68f"
-                        stopOpacity={0}
-                      />
-                    </linearGradient>
-                  </defs>
-                  <CartesianGrid
-                    stroke="rgba(255,255,255,0.04)"
-                    vertical={false}
-                  />
-                  <XAxis
-                    dataKey="t"
-                    stroke="transparent"
-                    tick={{
-                      fill: "#3d5166",
-                      fontSize: 10,
-                      fontFamily: "'JetBrains Mono', monospace",
-                    }}
-                    tickLine={false}
-                    axisLine={false}
-                    interval="preserveStartEnd"
-                  />
-                  <YAxis
-                    orientation="right"
-                    stroke="transparent"
-                    tick={{
-                      fill: "#3d5166",
-                      fontSize: 10,
-                      fontFamily: "'JetBrains Mono', monospace",
-                    }}
-                    tickLine={false}
-                    axisLine={false}
-                    width={54}
-                  />
-                  <Tooltip
-                    contentStyle={{
-                      background: "#0c1520",
-                      border: "1px solid rgba(255,255,255,0.16)",
-                      borderRadius: "5px",
-                      fontSize: "11px",
-                      fontFamily: "'JetBrains Mono', monospace",
-                      color: "#e8edf2",
-                    }}
-                    cursor={{ stroke: "rgba(255,255,255,0.08)" }}
-                    formatter={(v: number) => [`${v} SOL`, "NAV"]}
-                  />
-                  <Area
-                    type="monotone"
-                    dataKey="nav"
-                    stroke="#00d68f"
-                    strokeWidth={1.5}
-                    fill="url(#navGrad)"
-                    dot={false}
-                    activeDot={{ r: 3, fill: "#00d68f", strokeWidth: 0 }}
-                  />
-                </AreaChart>
-              </ResponsiveContainer>
-            </div>
-          </div>
+        <p><b>$</b> fornex run --market SOL-PERP</p>
+        <p><i>BULL</i> funding inverted, momentum confirmed</p>
+        <p><i>BEAR</i> resistance risk detected at 184.20</p>
+        <p><i>ZEN</i> approve long, cap exposure at 1.5x</p>
+        <p className="terminal-consensus">CONSENSUS: LONG · 72% · TX READY</p>
+      </div>
+    </motion.div>
+  );
+}
 
-          {/* Position Panel */}
-          <div className="position-section">
-            <div className="section-header">
-              <span className="section-label">Current Position</span>
-            </div>
-            <div className="position-flat-wrap">
-              <span className="position-flat-label">NO ACTIVE POSITION</span>
-              <span className="position-flat-sub">
-                Agent is monitoring for entry…
-              </span>
-            </div>
-          </div>
+export default function LandingPage() {
+  const rootRef = useRef<HTMLDivElement>(null);
+  const [scrolled, setScrolled] = useState(false);
 
-          {/* Agent Earnings */}
-          <div className="earnings-section">
-            <div className="earnings-top">
-              <div className="agent-status-badge">
-                <span className="agent-status-dot" />
-                Agent Active
-              </div>
-              <span
-                style={{
-                  fontFamily: "var(--font-mono)",
-                  fontSize: "10px",
-                  color: "var(--text-tertiary)",
-                }}
+  useEffect(() => {
+    let lenis: any;
+    let rafId = 0;
+    let ctx: any;
+
+    async function bootMotion() {
+      const Lenis = (await import("lenis")).default;
+      const gsapModule = await import("gsap");
+      const scrollTriggerModule = await import("gsap/ScrollTrigger");
+      const gsap = gsapModule.gsap;
+      const ScrollTrigger = scrollTriggerModule.ScrollTrigger;
+      gsap.registerPlugin(ScrollTrigger);
+
+      lenis = new Lenis({
+        duration: 1.25,
+        smoothWheel: true,
+        wheelMultiplier: 0.82,
+        touchMultiplier: 1.2,
+        easing: (t: number) => Math.min(1, 1.001 - Math.pow(2, -10 * t)),
+      });
+
+      lenis.on("scroll", ScrollTrigger.update);
+      gsap.ticker.add((time) => lenis.raf(time * 1000));
+      gsap.ticker.lagSmoothing(0);
+
+      ctx = gsap.context(() => {
+        gsap.utils.toArray<HTMLElement>(".reveal").forEach((el, index) => {
+          gsap.fromTo(
+            el,
+            { autoAlpha: 0, y: 70, filter: "blur(18px)" },
+            {
+              autoAlpha: 1,
+              y: 0,
+              filter: "blur(0px)",
+              duration: 1.15,
+              delay: (index % 4) * 0.04,
+              ease: "power3.out",
+              scrollTrigger: {
+                trigger: el,
+                start: "top 86%",
+                end: "bottom 54%",
+                toggleActions: "play none none reverse",
+              },
+            }
+          );
+        });
+
+        gsap.utils.toArray<HTMLElement>(".parallax-slow").forEach((el) => {
+          gsap.to(el, {
+            yPercent: -14,
+            ease: "none",
+            scrollTrigger: {
+              trigger: el,
+              start: "top bottom",
+              end: "bottom top",
+              scrub: 1.1,
+            },
+          });
+        });
+
+        gsap.to(".kinetic-title", {
+          backgroundPositionX: "100%",
+          ease: "none",
+          scrollTrigger: {
+            trigger: ".kinetic-title",
+            start: "top 70%",
+            end: "bottom 20%",
+            scrub: 1,
+          },
+        });
+      }, rootRef);
+    }
+
+    bootMotion();
+    const onScroll = () => setScrolled(window.scrollY > 80);
+    window.addEventListener("scroll", onScroll, { passive: true });
+    return () => {
+      cancelAnimationFrame(rafId);
+      window.removeEventListener("scroll", onScroll);
+      ctx?.revert();
+      lenis?.destroy();
+    };
+  }, []);
+
+  return (
+    <>
+      <Head>
+        <title>Fornex Protocol - Autonomous AI Trading Agents</title>
+        <meta
+          name="description"
+          content="Fornex is an institutional-grade AI trading agent platform where autonomous agents debate, execute, and prove every trade on Solana."
+        />
+        <meta name="viewport" content="width=device-width, initial-scale=1" />
+      </Head>
+
+      <div className="cinematic-page" ref={rootRef}>
+        <StageBackground />
+
+        <header className={`cinematic-nav ${scrolled ? "is-scrolled" : ""}`}>
+          <Link href="/" className="cinematic-logo">FORNEX</Link>
+          <nav>
+            <a href="#agents">Agents</a>
+            <a href="#protocol">Protocol</a>
+            <a href="#proof">Proof</a>
+            <a href="#security">Security</a>
+          </nav>
+          <Link href="/app" className="nav-pill">Launch App</Link>
+        </header>
+
+        <main>
+          <section className="cinema-hero">
+            <div className="hero-copy">
+              <motion.div
+                className="eyebrow"
+                initial={{ opacity: 0, y: 20, filter: "blur(12px)" }}
+                animate={{ opacity: 1, y: 0, filter: "blur(0px)" }}
+                transition={{ duration: 0.8, ease: [0.22, 1, 0.36, 1] }}
               >
-                pay.sh stream
-              </span>
+                <span /> Autonomous Solana vault intelligence
+              </motion.div>
+              <motion.h1
+                className="kinetic-title"
+                initial={{ opacity: 0, y: 42, filter: "blur(18px)" }}
+                animate={{ opacity: 1, y: 0, filter: "blur(0px)" }}
+                transition={{ duration: 1.05, delay: 0.08, ease: [0.22, 1, 0.36, 1] }}
+              >
+                AI agents that debate, trade, and prove every decision.
+              </motion.h1>
+              <motion.p
+                initial={{ opacity: 0, y: 28 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ duration: 0.9, delay: 0.28, ease: [0.22, 1, 0.36, 1] }}
+              >
+                Fornex turns trading strategy into an auditable multi-agent system:
+                BULL, BEAR, and ZEN challenge each other before capital moves.
+              </motion.p>
+              <motion.div
+                className="hero-actions"
+                initial={{ opacity: 0, y: 22 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ duration: 0.85, delay: 0.42, ease: [0.22, 1, 0.36, 1] }}
+              >
+                <MagneticLink href="/app" className="primary-orbit">
+                  Launch App <ArrowRight size={18} />
+                </MagneticLink>
+                <a className="ghost-orbit" href="#proof">
+                  Inspect Proof <Sparkles size={17} />
+                </a>
+              </motion.div>
             </div>
-
-            <div className="earn-total">{displayedEarnings.toFixed(3)} SOL earned</div>
-
-            <div className="earn-rows">
-              <div className="earn-row">
-                <span className="earn-row-label">Stream rate</span>
-                <span className="earn-row-val">0.001 SOL / trade</span>
+            <div className="hero-visual parallax-slow">
+              <CodeWindow />
+              <div className="orbit-card orbit-card-a">
+                <Bot size={18} /> 3 agents online
               </div>
-              <div className="earn-row">
-                <span className="earn-row-label">Executions</span>
-                <span className="earn-row-val">{stats.trades} trades</span>
-              </div>
-              <div className="earn-row">
-                <span className="earn-row-label">Win rate</span>
-                <span className="earn-row-val">{stats.winRate}%</span>
-              </div>
-              <div className="earn-row">
-                <span className="earn-row-label">Provider</span>
-                <span className="earn-row-val">pay.sh</span>
-              </div>
-            </div>
-
-            <div className="cycle-block">
-              <div className="cycle-header">
-                <span>Next cycle</span>
-                <span>
-                  {minsLeft}m {secsLeft.toString().padStart(2, "0")}s
-                </span>
-              </div>
-              <div className="cycle-track">
-                <div
-                  className="cycle-fill"
-                  style={{ width: `${cycleProgress * 100}%` }}
-                />
-              </div>
-            </div>
-          </div>
-        </div>
-
-        {/* RIGHT COLUMN */}
-        <div className="right-col">
-          {/* Agent Debate Feed */}
-          <div className="feed-panel">
-            <div className="feed-header">
-              <span className="feed-title">Agent Decisions</span>
-              <div className="feed-update-label">
-                <span className="live-dot" />
-                Updating every 30s
+              <div className="orbit-card orbit-card-b">
+                <RadioTower size={18} /> Solana proof stream
               </div>
             </div>
+          </section>
 
-            <div className="feed-body">
-              {decisions.length === 0 ? (
-                <div className="feed-empty">
-                  <span className="feed-empty-main">
-                    Scanning Markets
-                    <span className="scan-dots" />
-                  </span>
-                  <span className="feed-empty-sub">
-                    Waiting for first on-chain decision…
-                  </span>
+          <section className="metric-strip reveal">
+            {stats.map(([value, label]) => (
+              <div className="metric-tile" key={label}>
+                <strong>{value}</strong>
+                <span>{label}</span>
+              </div>
+            ))}
+          </section>
+
+          <section className="story-section" id="agents">
+            <div className="section-kicker reveal">MULTI-AGENT GOVERNANCE</div>
+            <h2 className="section-heading reveal">Three viewpoints. One constrained execution path.</h2>
+            <div className="agent-cinema-grid">
+              {agents.map((agent, index) => (
+                <motion.article
+                  className="glass-panel agent-panel reveal"
+                  key={agent.name}
+                  whileHover={{ y: -12, scale: 1.015 }}
+                  transition={{ type: "spring", stiffness: 180, damping: 18 }}
+                >
+                  <div className="panel-index">0{index + 1}</div>
+                  <h3>{agent.name}</h3>
+                  <p className="agent-tone">{agent.tone}</p>
+                  <div className="signal-row">
+                    <span>{agent.signal}</span>
+                    <b>{agent.confidence}</b>
+                  </div>
+                  <p>{agent.copy}</p>
+                </motion.article>
+              ))}
+            </div>
+          </section>
+
+          <section className="wide-product" id="protocol">
+            <div className="section-kicker reveal">FROM SIGNAL TO EXECUTION</div>
+            <h2 className="section-heading reveal">A trading floor compressed into a verifiable agent pipeline.</h2>
+            <div className="product-grid">
+              <div className="terminal-window big-terminal reveal">
+                <div className="terminal-top">
+                  <span />
+                  <span />
+                  <span />
+                  <strong>consensus.log</strong>
                 </div>
-              ) : (
-                decisions.map((d) => (
-                  <DecisionCard key={d.pubkey.toBase58()} decision={d} />
-                ))
-              )}
-            </div>
-          </div>
-
-          {/* Deposit / Withdraw */}
-          <div className="dw-section">
-            <div className="dw-tabs">
-              <button
-                className={`dw-tab${tab === "deposit" ? " active" : ""}`}
-                onClick={() => setTab("deposit")}
-              >
-                Deposit
-              </button>
-              <button
-                className={`dw-tab${tab === "withdraw" ? " active" : ""}`}
-                onClick={() => setTab("withdraw")}
-              >
-                Withdraw
-              </button>
-            </div>
-
-            <div className="dw-body">
-              <div className="input-group">
-                <input
-                  className="amount-input"
-                  value={amount}
-                  onChange={(e) => setAmount(e.target.value)}
-                  placeholder="0.00"
-                  inputMode="decimal"
-                />
-                <span className="input-suffix">SOL</span>
+                <div className="terminal-body log-body">
+                  {timeline.map(([step, title, copy]) => (
+                    <div className="log-row" key={step}>
+                      <b>{step}</b>
+                      <div>
+                        <strong>{title}</strong>
+                        <p>{copy}</p>
+                      </div>
+                    </div>
+                  ))}
+                </div>
               </div>
-
-              <div className="receive-row">
-                {tab === "deposit"
-                  ? `You receive: ${amount || "0"} shares`
-                  : `You receive: ${(Number(amount) * (stats.nav || 1)).toFixed(4)} SOL`}
+              <div className="systems-grid">
+                {systems.map(([title, copy, Icon]) => (
+                  <motion.div
+                    className="glass-panel system-card reveal"
+                    key={title as string}
+                    whileHover={{ x: 8, borderColor: "rgba(219,255,108,0.42)" }}
+                  >
+                    <Icon size={24} />
+                    <h3>{title as string}</h3>
+                    <p>{copy as string}</p>
+                  </motion.div>
+                ))}
               </div>
-
-              {!wallet.publicKey ? (
-                <button className="action-btn ghost" disabled>
-                  Connect Wallet to {tab === "deposit" ? "Deposit" : "Withdraw"}
-                </button>
-              ) : loading ? (
-                <button className="action-btn primary" disabled>
-                  <span className="spinner" />
-                  Confirming…
-                </button>
-              ) : (
-                <button
-                  className="action-btn primary"
-                  onClick={() => sendVaultIx(tab)}
-                >
-                  {tab === "deposit" ? "Deposit SOL" : "Withdraw SOL"}
-                </button>
-              )}
             </div>
-          </div>
-        </div>
-      </div>
+          </section>
 
-      {/* TOAST CONTAINER */}
-      <div className="toast-container">
-        {toasts.map((t) => (
-          <div key={t.id} className={`toast ${t.type}`}>
-            <span className="toast-title">{t.title}</span>
-            <span className="toast-body">{t.body}</span>
-          </div>
-        ))}
+          <section className="proof-section" id="proof">
+            <div>
+              <div className="section-kicker reveal">ON-CHAIN MEMORY</div>
+              <h2 className="section-heading reveal">No black boxes. No unverifiable genius.</h2>
+              <p className="section-copy reveal">
+                Fornex records the reasoning trail, final consensus, market, direction,
+                leverage, and execution reference so depositors can audit the agent brain
+                after the trade, not just trust a dashboard.
+              </p>
+              <div className="proof-actions reveal">
+                <a href="https://solscan.io" target="_blank" rel="noreferrer">
+                  View Explorer <ArrowRight size={17} />
+                </a>
+                <Link href="/app">Open Vault <WalletCards size={17} /></Link>
+              </div>
+            </div>
+            <div className="proof-stack">
+              {[
+                ["Consensus", "2/3 LONG", CheckCircle2],
+                ["Program", "H6vbf...Xwf", GitBranch],
+                ["Custody", "User-controlled", LockKeyhole],
+                ["Runtime", "Agent heartbeat live", Cpu],
+              ].map(([label, value, Icon]) => (
+                <motion.div className="proof-card reveal" key={label as string} whileHover={{ y: -6 }}>
+                  <Icon size={20} />
+                  <span>{label as string}</span>
+                  <strong>{value as string}</strong>
+                </motion.div>
+              ))}
+            </div>
+          </section>
+
+          <section className="security-section" id="security">
+            <div className="security-copy reveal">
+              <h2>Institutional-grade autonomy without surrendering control.</h2>
+              <p>
+                The platform is designed around constrained execution, transparent
+                decision logs, and vault-level risk limits so agent intelligence never
+                becomes agent discretion.
+              </p>
+            </div>
+            <div className="security-rails">
+              {["Non-custodial vault", "Leverage caps", "Auditable debates", "Emergency pause path"].map((item) => (
+                <div className="rail reveal" key={item}>{item}</div>
+              ))}
+            </div>
+          </section>
+
+          <section className="final-cinema">
+            <h2 className="reveal">Put autonomous capital to work with receipts.</h2>
+            <MagneticLink href="/app" className="primary-orbit final-launch">
+              Launch Fornex <ArrowRight size={18} />
+            </MagneticLink>
+          </section>
+        </main>
       </div>
-    </div>
+    </>
   );
-}
-
-/* ── Sub-components ──────────────────────────────────────── */
-
-function StatCard({
-  label,
-  value,
-  change,
-  positive,
-  negative,
-}: {
-  label: string;
-  value: string;
-  change: string;
-  positive?: boolean;
-  negative?: boolean;
-}) {
-  const valueClass = [
-    "stat-value",
-    positive ? "positive" : "",
-    negative ? "negative" : "",
-  ]
-    .filter(Boolean)
-    .join(" ");
-  const changeClass = [
-    "stat-change",
-    positive ? "positive" : "",
-    negative ? "negative" : "",
-  ]
-    .filter(Boolean)
-    .join(" ");
-
-  return (
-    <div className="stat-card">
-      <div className="stat-label">{label}</div>
-      <div className={valueClass}>{value}</div>
-      <div className={changeClass}>
-        {positive && "↑ "}
-        {negative && "↓ "}
-        {change}
-      </div>
-    </div>
-  );
-}
-
-function DecisionCard({ decision }: { decision: Decision }) {
-  const dir = dirLabel(decision.consensus.direction);
-  const cls = dir.toLowerCase();
-  const timeAgo = formatTimeAgo(decision.timestamp);
-  const longCount = [decision.bullVote, decision.bearVote, decision.zenVote].filter(
-    (v) => v.direction === 1
-  ).length;
-  const shortCount = [decision.bullVote, decision.bearVote, decision.zenVote].filter(
-    (v) => v.direction === 2
-  ).length;
-  const consensusStr =
-    dir === "LONG"
-      ? `${longCount}/3 LONG`
-      : dir === "SHORT"
-      ? `${shortCount}/3 SHORT`
-      : "2/3 FLAT";
-
-  return (
-    <article className={`decision-card ${cls}`}>
-      <div className="decision-top">
-        <span className={`dir-badge ${cls}`}>{dir}</span>
-        <span className="decision-market">
-          {decision.market || "SOL-PERP"}
-        </span>
-        <span className="decision-conf">
-          {decision.consensus.confidence}% conf
-        </span>
-        <span className="decision-time">{timeAgo}</span>
-      </div>
-
-      <div className="agents-grid">
-        <AgentRow icon="🐂" name="BULL" colorClass="bull" vote={decision.bullVote} />
-        <AgentRow icon="🐻" name="BEAR" colorClass="bear" vote={decision.bearVote} />
-        <AgentRow icon="⚖️" name="ZEN"  colorClass="zen"  vote={decision.zenVote}  />
-      </div>
-
-      <div className="decision-footer">
-        <span className={`consensus-line${decision.executed ? " executed" : ""}`}>
-          CONSENSUS: {consensusStr}
-          {decision.executed ? " → Executed" : " → Logged"}
-        </span>
-        {decision.executionRef && decision.executionRef.trim() && (
-          <a
-            className="tx-link"
-            href={`https://solscan.io/tx/${decision.executionRef}?cluster=devnet`}
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            TX: {decision.executionRef.slice(0, 4)}…{decision.executionRef.slice(-4)} ↗
-          </a>
-        )}
-      </div>
-    </article>
-  );
-}
-
-function AgentRow({
-  icon,
-  name,
-  colorClass,
-  vote,
-}: {
-  icon: string;
-  name: string;
-  colorClass: string;
-  vote: Vote;
-}) {
-  const voteDir = dirLabel(vote.direction).toLowerCase();
-  return (
-    <div className="agent-row">
-      <div className="agent-meta">
-        <div className="agent-id">
-          <span className="agent-icon">{icon}</span>
-          <span className={`agent-name ${colorClass}`}>{name}</span>
-        </div>
-        <div className="agent-badges">
-          <span className={`abadge ${voteDir}`}>{dirLabel(vote.direction)}</span>
-          <span className="abadge neutral">{vote.leverage}x</span>
-          <span className="abadge neutral">{vote.confidence}%</span>
-        </div>
-      </div>
-      <span className="agent-reasoning">
-        &ldquo;{vote.reasoning || "No reasoning provided."}&rdquo;
-      </span>
-    </div>
-  );
-}
-
-/* ── Helpers ─────────────────────────────────────────────── */
-
-function formatTimeAgo(timestamp: number): string {
-  const diff = Math.floor(Date.now() / 1000) - timestamp;
-  if (diff < 60) return `${diff}s ago`;
-  if (diff < 3600) return `${Math.floor(diff / 60)}m ago`;
-  if (diff < 86400) return `${Math.floor(diff / 3600)}h ago`;
-  return `${Math.floor(diff / 86400)}d ago`;
-}
-
-function dirLabel(d: number) {
-  if (d === 1) return "LONG";
-  if (d === 2) return "SHORT";
-  return "FLAT";
-}
-
-function decodeVault(data: Buffer) {
-  const r = new Reader(data);
-  r.skip(8);
-  return {
-    agentAuthority: r.publicKey(),
-    admin: r.publicKey(),
-    totalDeposits: r.u64(),
-    totalShares: r.u64(),
-    nav: r.u64(),
-    tradeCount: r.u32(),
-    winningTrades: r.u32(),
-    isTradingPaused: r.bool(),
-  };
-}
-
-function decodeDecision(pubkey: PublicKey, data: Buffer): Decision | null {
-  try {
-    const r = new Reader(data);
-    r.skip(8);
-    r.publicKey();
-    return {
-      pubkey,
-      decisionIndex: r.u32(),
-      market: r.fixedString(16),
-      bullVote: r.vote(),
-      bearVote: r.vote(),
-      zenVote: r.vote(),
-      consensus: r.vote(),
-      sizeUsd: Number(r.u64()),
-      executed: r.bool(),
-      executionRef: r.fixedString(88),
-      timestamp: Number(r.skipU64AfterPnl()),
-    };
-  } catch {
-    return null;
-  }
-}
-
-class Reader {
-  private offset = 0;
-  constructor(private data: Buffer) {}
-  skip(n: number) { this.offset += n; }
-  publicKey() {
-    const k = new PublicKey(this.data.subarray(this.offset, this.offset + 32));
-    this.offset += 32;
-    return k;
-  }
-  u8() { const v = this.data.readUInt8(this.offset); this.offset += 1; return v; }
-  bool() { return this.u8() === 1; }
-  u32() { const v = this.data.readUInt32LE(this.offset); this.offset += 4; return v; }
-  u64() { const v = this.data.readBigUInt64LE(this.offset); this.offset += 8; return v; }
-  fixedString(size: number) {
-    const b = this.data.subarray(this.offset, this.offset + size);
-    this.offset += size;
-    const end = b.indexOf(0);
-    return b.subarray(0, end === -1 ? size : end).toString("utf8");
-  }
-  vote(): Vote {
-    return {
-      direction: this.u8(),
-      leverage: this.u8(),
-      confidence: this.u8(),
-      reasoning: this.fixedString(200),
-    };
-  }
-  skipU64AfterPnl() { this.offset += 8; return this.u64(); }
-}
-
-async function discriminator(ns: string, name: string) {
-  const b = new TextEncoder().encode(`${ns}:${name}`);
-  const h = await crypto.subtle.digest("SHA-256", b);
-  return Buffer.from(h).subarray(0, 8);
-}
-
-function u64(v: bigint) {
-  const b = Buffer.alloc(8);
-  b.writeBigUInt64LE(v);
-  return b;
-}
-
-function readonly(pubkey: PublicKey) {
-  return { pubkey, isSigner: false, isWritable: false };
-}
-function writable(pubkey: PublicKey) {
-  return { pubkey, isSigner: false, isWritable: true };
-}
-function signer(pubkey: PublicKey) {
-  return { pubkey, isSigner: true, isWritable: true };
 }

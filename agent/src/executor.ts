@@ -4,6 +4,7 @@ import { connection, DRIFT_ENV, loadAgentKeypair } from "./config";
 import type { CurrentPosition, Direction } from "./types";
 
 const SOL_PERP_MARKET_INDEX = 0;
+const DRIFT_INIT_TIMEOUT_MS = 15_000;
 
 let driftClient: any | null = null;
 let driftUser: any | null = null;
@@ -13,7 +14,11 @@ export async function initExecutor(): Promise<void> {
   if (driftClient) return;
 
   try {
-    const drift = await import("@drift-labs/sdk");
+    const drift = await withTimeout(
+      import("@drift-labs/sdk"),
+      DRIFT_INIT_TIMEOUT_MS,
+      "Drift SDK import timed out"
+    );
     agentKeypair = loadAgentKeypair();
     const wallet = {
       publicKey: agentKeypair.publicKey,
@@ -32,8 +37,17 @@ export async function initExecutor(): Promise<void> {
       wallet,
       env: DRIFT_ENV,
     });
-    await driftClient.subscribe();
-    driftUser = driftClient.getUser?.();
+    await withTimeout(
+      driftClient.subscribe(),
+      DRIFT_INIT_TIMEOUT_MS,
+      "DriftClient.subscribe timed out"
+    );
+    try {
+      driftUser = driftClient.getUser?.() ?? null;
+    } catch {
+      driftUser = null;
+      console.warn("[executor] No Drift user account found; treating position as flat");
+    }
   } catch (error) {
     console.warn("[executor] Drift initialization failed", error);
     driftClient = null;
@@ -90,7 +104,14 @@ export async function closePosition(): Promise<{
 export async function getCurrentPosition(): Promise<CurrentPosition | null> {
   try {
     await initExecutor();
-    const user = driftUser || driftClient?.getUser?.();
+    let user = driftUser;
+    if (!user && driftClient) {
+      try {
+        user = driftClient.getUser?.() ?? null;
+      } catch {
+        return null;
+      }
+    }
     const position = user
       ?.getUserAccount?.()
       ?.perpPositions?.find((p: any) => p.marketIndex === SOL_PERP_MARKET_INDEX);
@@ -154,3 +175,17 @@ function numberFromDrift(value: any): number {
   return Number(value) / 1e6 || 0;
 }
 
+function withTimeout<T>(
+  promise: Promise<T>,
+  ms: number,
+  message: string
+): Promise<T> {
+  let timeout: ReturnType<typeof setTimeout> | undefined;
+  const timeoutPromise = new Promise<never>((_, reject) => {
+    timeout = setTimeout(() => reject(new Error(message)), ms);
+  });
+
+  return Promise.race([promise, timeoutPromise]).finally(() => {
+    if (timeout) clearTimeout(timeout);
+  });
+}

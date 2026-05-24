@@ -37,6 +37,9 @@
     "tests/**/*.ts",
     "agent/**/*.ts",
     "pages/**/*.tsx",
+    "components/**/*.tsx",
+    "hooks/**/*.ts",
+    "lib/**/*.ts",
     "styles/**/*.css",
     "next-env.d.ts",
     ".next/types/**/*.ts"
