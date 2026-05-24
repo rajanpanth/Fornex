@@ -1,427 +1,182 @@
-<p align="center">
-  <img src="https://img.shields.io/badge/Solana-Devnet-9945FF?style=for-the-badge&logo=solana&logoColor=white" />
-  <img src="https://img.shields.io/badge/Anchor-0.30-23C4ED?style=for-the-badge&logo=anchor&logoColor=white" />
-  <img src="https://img.shields.io/badge/GPT--4o-Azure_OpenAI-412991?style=for-the-badge&logo=openai&logoColor=white" />
-  <img src="https://img.shields.io/badge/Drift_Protocol-Perps-1DE9B6?style=for-the-badge" />
-  <img src="https://img.shields.io/badge/License-MIT-yellow?style=for-the-badge" />
-</p>
+# Fornex Protocol
 
-<h1 align="center">🏛️ Fornex Protocol</h1>
+> Autonomous 3-agent AI trading vault where every decision
+> is permanently stored on Solana. The world's first
+> auditable AI hedge fund on-chain.
 
-<p align="center">
-  <strong>The world's first auditable AI hedge fund on Solana.</strong>
-  <br />
-  <em>Three AI agents debate every trade. Every vote and reasoning is stored permanently on-chain.</em>
-  <br /><br />
-  <code>Program ID: H6vbfTp6XwfFSHWtpzjZuyrx6bpnp8Rwt6bVZAUT6vZf</code>
-</p>
+[![Solana](https://img.shields.io/badge/Solana-Devnet-9945FF)]()
+[![Anchor](https://img.shields.io/badge/Anchor-0.30-blue)]()
+[![GPT-4o](https://img.shields.io/badge/AI-GPT--4o-green)]()
+[![License](https://img.shields.io/badge/License-MIT-yellow)]()
 
----
+## 🔴 Live on Solana Devnet
 
-## 🔴 The Problem
+| Resource | Link |
+|---|---|
+| Program | https://explorer.solana.com/address/H6vbfTp6XwfFSHWtpzjZuyrx6bpnp8Rwt6bVZAUT6vZf?cluster=devnet |
+| Vault | https://explorer.solana.com/address/HMkL7zzAroE919esVY6HSMYzB2ejHM5m4A8JKCSrgBXR?cluster=devnet |
+| Agent Running Since | May 24, 2026 |
+| Decisions On-Chain | 25 (growing every 15 min) |
 
-**AI trading is a black box.**
+## Screenshots
 
-Users deposit capital into AI-managed funds — and that's where transparency ends. The agent makes decisions off-chain, executes trades nobody can verify, and there's zero accountability for *why* a position was opened or closed.
+![Debate Feed](docs/screenshots/debate-feed.png)
+![Solana Explorer Decision Account](docs/screenshots/explorer-decision.png)
+![Agent Terminal Output](docs/screenshots/agent-terminal.png)
+![Vault Stats](docs/screenshots/vault-stats.png)
 
-> *"Trust me, bro"* is not a trading strategy.
+## The Problem
 
-There is no on-chain record of the AI's reasoning. No audit trail. No way for depositors to verify whether the agent is acting rationally — or gambling their SOL.
+Current DeFi vaults are black boxes. You deposit and hope.
+No transparency into what AI is doing. No way to verify.
+No auditability. Pure trust.
 
----
+## The Solution
 
-## 🟢 The Solution
+Fornex deploys three competing AI agents that debate every
+perp trade on Drift Protocol. Every vote, every argument,
+every disagreement — stored permanently on Solana.
+Not in a database. On-chain. Forever. Verifiable by anyone.
 
-**Fornex makes every AI decision auditable, transparent, and permanently on-chain.**
-
-Three specialized AI agents — each with a distinct trading personality — independently analyze Drift Protocol perpetual markets every 15 minutes. They vote on direction, leverage, and confidence. A 2/3 consensus is required to execute. Every vote, every reasoning string, and every trade outcome is written to Solana as a permanent, publicly readable account.
-
-Depositors don't need to trust the agent. They can **verify** it.
-
----
-
-## ⚙️ How It Works
+## How It Works
 
 ```
-  ╔═══════════════════════════════════════════════════════════════════════╗
-  ║                        FORNEX PROTOCOL FLOW                         ║
-  ╠═══════════════════════════════════════════════════════════════════════╣
-  ║                                                                     ║
-  ║   👤 User                                                           ║
-  ║    │                                                                ║
-  ║    │  deposit SOL                                                   ║
-  ║    ▼                                                                ║
-  ║   ┌─────────────────────────────────────┐                           ║
-  ║   │   Fornex Anchor Vault Program       │  ← Solana Devnet         ║
-  ║   │   • mint shares (deposit)           │                           ║
-  ║   │   • burn shares (withdraw)          │                           ║
-  ║   │   • store NAV + trade count         │                           ║
-  ║   └──────────────┬──────────────────────┘                           ║
-  ║                  │                                                  ║
-  ║          every 15 minutes                                           ║
-  ║                  │                                                  ║
-  ║   ┌──────────────▼──────────────────────┐                           ║
-  ║   │   🤖 AI Agent Loop (index.ts)       │                           ║
-  ║   │                                     │                           ║
-  ║   │   ① signals.ts → Drift Protocol API │  5 market signals        ║
-  ║   │   ② brain.ts   → GPT-4o × 3 agents │  parallel voting         ║
-  ║   │   ③ executor.ts→ Drift SDK perps    │  consensus execution     ║
-  ║   │   ④ logger.ts  → Solana on-chain    │  permanent audit trail   ║
-  ║   │   ⑤ paysh.ts   → pay.sh streaming   │  0.001 SOL per trade     ║
-  ║   └──────────────┬──────────────────────┘                           ║
-  ║                  │                                                  ║
-  ║                  ▼                                                  ║
-  ║   ┌─────────────────────────────────────┐                           ║
-  ║   │   📊 Next.js Dashboard              │                           ║
-  ║   │   • vault NAV + share price         │                           ║
-  ║   │   • live agent reasoning feed       │                           ║
-  ║   │   • equity curve (recharts)         │                           ║
-  ║   │   • deposit / withdraw controls     │                           ║
-  ║   └─────────────────────────────────────┘                           ║
-  ║                                                                     ║
-  ╚═══════════════════════════════════════════════════════════════════════╝
+User deposits SOL -> receives vault shares
+         |
+Every 15 minutes (autonomous, no human needed):
+         |
++-------------------------------------+
+|  BULL 🐂  reads: funding rate, OI   |
+|  BEAR 🐻  reads: L/S ratio, spread  |  -> 3 votes
+|  ZEN  ⚖️   reads: liq walls, vol    |
++-------------------------------------+
+         |
+Majority vote -> executes on Drift Protocol
+         |
+ALL 3 votes + reasoning -> stored on Solana forever
+         |
+Agent earns 0.001 SOL via pay.sh per trade
+         |
+NAV updates -> share price changes -> user P&L changes
 ```
 
----
+## The Three Agents
 
-## 🧠 Agent Personalities
+| Agent | Personality | Max Leverage | Signal Focus |
+|---|---|---|---|
+| 🐂 BULL | Momentum trader | 3x | Negative funding, rising OI |
+| 🐻 BEAR | Contrarian | 2x | Extreme L/S ratio, overbought |
+| ⚖️ ZEN | Risk manager | 1.5x | Liquidation walls, vol, spread |
 
-Fornex runs **three AI agents** in parallel, each powered by **Azure OpenAI GPT-4o**. They receive the same market data but analyze it through fundamentally different lenses:
+**Consensus: 2/3 majority wins. Confidence > 65% to execute.**
 
-| Agent | Role | Personality | Max Leverage | Bias |
-|:---:|:---|:---|:---:|:---:|
-| 🐂 **BULL** | Momentum Trader | Favors LONG setups when funding is negative (shorts overcrowded), OI is rising (new money entering), and the long/short ratio is below 1.2 (not yet crowded). Decisive — sitting flat costs opportunity. | **3×** | LONG |
-| 🐻 **BEAR** | Contrarian Trader | Fades crowded longs, watches positive funding (longs overextended), and prefers SHORT or FLAT when L/S ratio exceeds 1.6 or mark/index spread is stretched. Protects capital first. | **2×** | SHORT |
-| ⚖️ **ZEN** | Risk Manager | Only trades when risk/reward is clearly favorable. Requires tight spread, low volatility, and clear liquidation walls. Prefers FLAT unless the setup is pristine. Capital preservation is the top priority. | **1.5×** | FLAT |
+## Technical Stack
 
-### Consensus Engine
+| Layer | Technology |
+|---|---|
+| Smart Contract | Anchor (Rust) — 7 instructions |
+| Perp Trading | Drift Protocol SDK (devnet) |
+| AI Agents | Azure OpenAI GPT-4o |
+| Agent Loop | TypeScript + pm2 (15-min cycles) |
+| Payments | pay.sh streaming micropayments |
+| Frontend | Next.js + pure CSS |
+| Wallet | Phantom + @solana/wallet-adapter |
 
-```
-  ┌─────────┐   ┌─────────┐   ┌─────────┐
-  │  🐂 BULL │   │  🐻 BEAR │   │  ⚖️ ZEN  │
-  │  LONG 2x │   │ SHORT 2x │   │  LONG 1x │
-  │  conf: 78 │   │  conf: 62 │   │  conf: 71 │
-  └─────┬─────┘   └─────┬─────┘   └─────┬─────┘
-        │               │               │
-        └───────────┬───┘───────────────┘
-                    ▼
-          ┌─────────────────┐
-          │  2/3 CONSENSUS  │
-          │   LONG  1.5x    │
-          │   conf: 70      │
-          │ → EXECUTE TRADE │
-          └─────────────────┘
-```
-
-- **Direction**: majority wins (≥2 of 3 agents must agree)
-- **Leverage**: average of agreeing agents, capped at **3×**
-- **Execution**: only when consensus direction ≠ FLAT **and** confidence > **65**
-- If no majority → defaults to **FLAT** (no trade)
-
----
-
-## 🛠️ Technical Stack
-
-| Layer | Technology | Purpose |
-|:---|:---|:---|
-| **Smart Contract** | Solana + Anchor (Rust) | Vault deposits, withdrawals, share accounting, on-chain decision logs |
-| **Perp Trading** | Drift Protocol SDK (devnet) | SOL-PERP market signals & order execution |
-| **AI Reasoning** | Azure OpenAI GPT-4o | Multi-agent analysis with structured JSON output |
-| **Payments** | pay.sh | Streaming micropayments — 0.001 SOL per executed trade |
-| **Frontend** | Next.js + @solana/wallet-adapter | Dashboard with wallet connect, deposit/withdraw, reasoning feed |
-| **Charts** | Recharts | Equity curve visualization |
-| **Testing** | Mocha + Chai + ts-mocha | Anchor integration tests |
-
----
-
-## 📜 Smart Contract
-
-The Anchor program (`programs/fornex/src/lib.rs`) exposes **6 instructions**:
-
-| Instruction | Caller | Description |
-|:---|:---:|:---|
-| `initialize_vault` | Admin | Creates the vault, sets the AI agent's authority pubkey |
-| `deposit` | User | Transfers SOL into the vault, mints proportional shares |
-| `withdraw` | User | Burns shares, returns proportional SOL to the user |
-| `log_trade` | Agent | Logs a single trade decision with reasoning (512 bytes on-chain) |
-| `log_multi_agent_decision` | Agent | Logs all 3 agent votes + consensus with reasoning (the audit trail) |
-| `update_nav` | Agent | Updates the vault's Net Asset Value after trades settle |
-
-### 📐 Share Math
+## Architecture
 
 ```
-  ╔═══════════════════════════════════════════════════════════╗
-  ║                    SHARE CALCULATION                     ║
-  ╠═══════════════════════════════════════════════════════════╣
-  ║                                                          ║
-  ║  First deposit:                                          ║
-  ║    shares = deposit_lamports                             ║
-  ║                                                          ║
-  ║  Subsequent deposits:                                    ║
-  ║    shares = deposit_lamports × total_shares / nav        ║
-  ║                                                          ║
-  ║  Withdrawal:                                             ║
-  ║    sol_out = shares_to_burn × nav / total_shares         ║
-  ║                                                          ║
-  ╚═══════════════════════════════════════════════════════════╝
++-------------+     +------------------+     +---------------+
+|    USER     |---->|  ANCHOR VAULT    |---->|  DRIFT PERPS  |
+|  (Phantom)  |     |  (Solana Devnet) |     |   (devnet)    |
++-------------+     +------------------+     +---------------+
+                              |
+                    +---------v--------+
+                    |   AI AGENT       |
+                    |   (pm2, 15 min)  |
+                    |                  |
+                    |  signals.ts      |
+                    |  brain.ts (x3)   |
+                    |  executor.ts     |
+                    |  logger.ts       |
+                    |  paysh.ts        |
+                    +---------+--------+
+                              |
+                    +---------v--------+
+                    | MultiAgentDecision|
+                    | accounts on-chain |
+                    | (permanent, public)|
+                    +---------+--------+
+                              |
+                    +---------v--------+
+                    |  NEXT.JS FRONTEND |
+                    |  reads chain live |
+                    |  localhost:3001   |
+                    +------------------+
 ```
 
-### On-Chain Account Layout
+## Smart Contract Instructions
 
-| Account | Key Fields | Size |
-|:---|:---|:---:|
-| **Vault** | `agent_authority`, `admin`, `total_deposits`, `total_shares`, `nav`, `trade_count`, `winning_trades`, `is_trading_paused` | ~113 B |
-| **UserDeposit** | `owner`, `vault`, `shares`, `total_deposited`, `deposited_at` | ~89 B |
-| **TradeLog** | `market [u8;16]`, `direction`, `confidence`, `reasoning [u8;512]`, `pnl_lamports` | ~582 B |
-| **MultiAgentDecision** | `bull_vote`, `bear_vote`, `zen_vote`, `consensus` (each with `reasoning [u8;200]`), `execution_ref [u8;88]` | ~986 B |
+| Instruction | Description |
+|---|---|
+| initialize_vault | Creates vault PDA, sets agent authority |
+| deposit | User sends SOL, receives proportional shares |
+| withdraw | Burns shares, returns proportional SOL |
+| log_multi_agent_decision | Stores all 3 votes on-chain permanently |
+| update_nav | Updates vault value after trade settles |
+| emergency_pause | Halts agent trading (safety switch) |
+| resume | Restarts agent trading after pause |
 
----
-
-## 🤖 AI Decision Engine
-
-### Signal Pipeline (`signals.ts`)
-
-Every 15 minutes, the agent fetches **5 real-time signals** from Drift Protocol's SOL-PERP market:
-
-| # | Signal | What It Measures |
-|:---:|:---|:---|
-| 1 | **Funding Rate** | Whether longs or shorts are overcrowded (% per hour) |
-| 2 | **Open Interest Change** | New money entering/exiting the market (% change) |
-| 3 | **Long/Short Ratio** | Directional crowding — longs vs shorts |
-| 4 | **Mark vs Index Spread** | Price deviation from oracle — how stretched is the market |
-| 5 | **Liquidation Wall** | Nearest price level with concentrated liquidation risk |
-
-### Decision Flow
-
-```
-  ┌────────────────────┐
-  │  Drift Protocol    │
-  │  SOL-PERP Market   │
-  └────────┬───────────┘
-           │  5 signals
-           ▼
-  ┌────────────────────┐      ┌──────────────────────────────┐
-  │  signals.ts        │─────▶│  brain.ts                    │
-  │  fetch & normalize │      │  ┌──────┐┌──────┐┌──────┐   │
-  └────────────────────┘      │  │ BULL ││ BEAR ││ ZEN  │   │
-                              │  │GPT-4o││GPT-4o││GPT-4o│   │
-                              │  └──┬───┘└──┬───┘└──┬───┘   │
-                              │     └───┬───┘───────┘       │
-                              │         ▼                    │
-                              │  ┌──────────────┐           │
-                              │  │  Consensus   │           │
-                              │  │  2/3 majority│           │
-                              │  └──────┬───────┘           │
-                              └─────────┼───────────────────┘
-                                        │
-                         ┌──────────────┼──────────────┐
-                         ▼              ▼              ▼
-                  ┌────────────┐ ┌────────────┐ ┌────────────┐
-                  │executor.ts │ │ logger.ts  │ │  paysh.ts  │
-                  │Drift SDK   │ │on-chain log│ │0.001 SOL   │
-                  │place order │ │vote+reason │ │per trade   │
-                  └────────────┘ └────────────┘ └────────────┘
-```
-
----
-
-## 🖥️ Live Demo
-
-The **Next.js dashboard** reads directly from Solana and displays:
-
-| Feature | Description |
-|:---|:---|
-| 💰 **Vault Stats** | NAV, total shares, share price, trade count, win rate |
-| 🧠 **Agent Reasoning Feed** | Live BULL / BEAR / ZEN votes with reasoning strings |
-| 📈 **Equity Curve** | Historical NAV performance plotted with Recharts |
-| 🔐 **Deposit / Withdraw** | Wallet-connected controls via `@solana/wallet-adapter` |
-| 💸 **Agent Earnings** | pay.sh streaming stats — trades per day, total earned |
-
----
-
-## 🚀 Getting Started
-
-### Prerequisites
-
-- **Node.js** ≥ 18
-- **Rust** + **Anchor CLI** ≥ 0.30
-- **Solana CLI** (configured for devnet)
-- An **Azure OpenAI** API key with a GPT-4o deployment
-
-### 1. Clone & Install
+## Getting Started
 
 ```bash
-git clone https://github.com/your-username/fornex.git
-cd fornex
+# 1. Clone
+git clone https://github.com/YOUR_USERNAME/fornex-protocol
+cd fornex-protocol
+
+# 2. Install dependencies
 npm install
-```
+cd agent && npm install && cd ..
+cd frontend && npm install && cd ..
 
-### 2. Build the Anchor Program
-
-```bash
-anchor build
-```
-
-> 💡 On Windows, use `anchor build --no-idl` if IDL generation fails.
-
-### 3. Run Tests
-
-```bash
-anchor test
-```
-
-### 4. Deploy to Devnet
-
-```bash
-solana config set --url devnet
-anchor deploy
-```
-
-### 5. Configure & Run the AI Agent
-
-```bash
+# 3. Set up environment
 cp agent/.env.example agent/.env
-# Edit agent/.env with your keys:
-#   AZURE_OPENAI_ENDPOINT=https://your-endpoint.openai.azure.com/
-#   AZURE_OPENAI_KEY=your-key
-#   AZURE_OPENAI_DEPLOYMENT=gpt-4o
-#   AGENT_KEYPAIR=your-base58-secret-key
-#   VAULT_ADDRESS=your-vault-address
-#   VAULT_PROGRAM_ID=H6vbfTp6XwfFSHWtpzjZuyrx6bpnp8Rwt6bVZAUT6vZf
+cp frontend/.env.local.example frontend/.env.local
+# Fill in your values
 
-npm run agent
+# 4. Run frontend
+npm run dev -- -p 3001
+
+# 5. Start agent
+cd agent && pm2 start "npx ts-node src/index.ts" --name fornex-agent
+
+# 6. View live
+open http://localhost:3001
 ```
 
-### 6. Launch the Dashboard
+## On-Chain Proof
 
-```bash
-cp .env.local.example .env.local
-# Edit .env.local with your RPC URL and program ID
+Every 15 minutes, a new MultiAgentDecision account is
+created on Solana. You can verify any decision at:
 
-npm run dev
-```
+https://explorer.solana.com/address/26xK7W7tRkrXNebaBwW9cSD7NG2L1G9udepr7gi6c9Qp?cluster=devnet
 
-Open [http://localhost:3000](http://localhost:3000) and connect your wallet.
+The account stores:
+- BULL vote (direction + leverage + confidence + reasoning)
+- BEAR vote (direction + leverage + confidence + reasoning)
+- ZEN vote (direction + leverage + confidence + reasoning)
+- Consensus decision
+- Execution status
+- Timestamp
+
+**This data is permanent. Immutable. Trustless.**
+
+## Demo Proof Transactions
+
+| Action | Transaction |
+|---|---|
+| Deposit 0.5 SOL | https://solscan.io/tx/4AQNwfbUs1Z3cbo7VLreCeLgrrh1r7PnCzoKQzYQoL97JgQiQw4TWeiHpJsjvy6roAwq9F4BSqdukfsEcBsZRvRj?cluster=devnet |
+| Withdraw SOL | https://solscan.io/tx/4bfNiVKpZFKAzYvNmkUbbF2xzPGQKsq8faUqsKMFjbz6VzN2ef1qNFWMZahP3ScHQ7sropae9DfLcj5khVcbtwR1?cluster=devnet |
 
 ---
 
-## 🏗️ Architecture
-
-```
-  ╔════════════════════════════════════════════════════════════════════════╗
-  ║                        FORNEX ARCHITECTURE                           ║
-  ╠════════════════════════════════════════════════════════════════════════╣
-  ║                                                                      ║
-  ║   ┌──────────────┐          ┌──────────────────────────────────────┐  ║
-  ║   │  User Wallet │          │         Solana Devnet                │  ║
-  ║   │  (Phantom,   │          │                                      │  ║
-  ║   │   Solflare)  │          │  ┌────────────────────────────────┐  │  ║
-  ║   └──────┬───────┘          │  │  Fornex Anchor Program         │  │  ║
-  ║          │                  │  │  ┌─────────┐ ┌──────────────┐  │  │  ║
-  ║          │ deposit/withdraw │  │  │  Vault  │ │ UserDeposit  │  │  │  ║
-  ║          └─────────────────▶│  │  └─────────┘ └──────────────┘  │  │  ║
-  ║                             │  │  ┌─────────┐ ┌──────────────┐  │  │  ║
-  ║                             │  │  │TradeLog │ │MultiAgentDec │  │  │  ║
-  ║                             │  │  └─────────┘ └──────────────┘  │  │  ║
-  ║                             │  └────────────────────────────────┘  │  ║
-  ║                             └──────────────────────────────────────┘  ║
-  ║                                         ▲                            ║
-  ║                                         │  log decisions + NAV       ║
-  ║                                         │                            ║
-  ║   ┌─────────────────────────────────────┴──────────────────────────┐  ║
-  ║   │                    AI AGENT (Off-Chain)                        │  ║
-  ║   │                                                                │  ║
-  ║   │  ┌──────────┐  ┌──────────┐  ┌──────────┐  ┌──────────┐      │  ║
-  ║   │  │signals.ts│  │ brain.ts │  │executor.ts│  │logger.ts │      │  ║
-  ║   │  │ 5 Drift  │→ │ 3×GPT-4o│→ │ Drift SDK│  │ on-chain │      │  ║
-  ║   │  │ signals  │  │consensus │  │  trades  │  │  writes  │      │  ║
-  ║   │  └──────────┘  └──────────┘  └──────────┘  └──────────┘      │  ║
-  ║   │                                                                │  ║
-  ║   │  ┌──────────┐  ┌──────────┐                                   │  ║
-  ║   │  │ paysh.ts │  │ index.ts │  ← 15-minute loop                 │  ║
-  ║   │  │streaming │  │main entry│                                   │  ║
-  ║   │  └──────────┘  └──────────┘                                   │  ║
-  ║   └────────────────────────────────────────────────────────────────┘  ║
-  ║                                         │                            ║
-  ║                               reads chain directly                   ║
-  ║                                         │                            ║
-  ║   ┌─────────────────────────────────────▼──────────────────────────┐  ║
-  ║   │                    NEXT.JS DASHBOARD                           │  ║
-  ║   │   wallet-adapter · vault stats · reasoning feed · recharts    │  ║
-  ║   └────────────────────────────────────────────────────────────────┘  ║
-  ║                                                                      ║
-  ╚════════════════════════════════════════════════════════════════════════╝
-```
-
----
-
-## 📁 Project Structure
-
-```
-fornex/
-├── programs/
-│   └── fornex/
-│       └── src/
-│           ├── lib.rs              # Anchor program entry — 6 instructions
-│           ├── state.rs            # Vault, UserDeposit, TradeLog, MultiAgentDecision
-│           ├── errors.rs           # Custom error codes
-│           └── instructions/       # Handler modules for each instruction
-│
-├── agent/
-│   ├── .env.example                # Environment variable template
-│   └── src/
-│       ├── index.ts                # 15-minute main loop — orchestrates everything
-│       ├── signals.ts              # 5 Drift Protocol signals (funding, OI, L/S, spread, liq)
-│       ├── brain.ts                # 3 GPT-4o agents (BULL, BEAR, ZEN) + consensus engine
-│       ├── executor.ts             # Drift SDK — open/close SOL-PERP positions
-│       ├── logger.ts               # On-chain decision logging via raw Anchor instructions
-│       ├── paysh.ts                # pay.sh streaming micropayments (0.001 SOL/trade)
-│       ├── config.ts               # RPC, program ID, keypair loading, constants
-│       └── types.ts                # TypeScript interfaces — Direction, AgentVote, Consensus
-│
-├── pages/
-│   ├── _app.tsx                    # Next.js app wrapper with wallet providers
-│   └── index.tsx                   # Dashboard — vault stats, reasoning feed, equity curve
-│
-├── frontend/
-│   └── .env.local.example          # Frontend environment template
-│
-├── tests/
-│   └── fornex.ts                   # Anchor integration tests
-│
-├── Anchor.toml                     # Anchor workspace config
-├── Cargo.toml                      # Rust workspace
-├── package.json                    # Node dependencies + scripts
-├── tsconfig.json                   # TypeScript config
-└── README.md                       # ← You are here
-```
-
----
-
-## � Live Proof (Devnet)
-
-Fornex is deployed and running on Solana Devnet. The AI agent cycles every 15 minutes and logs every decision permanently on-chain.
-
-| Item | Link |
-|:---|:---|
-| **Program** | [H6vbfTp6XwfFSHWtpzjZuyrx6bpnp8Rwt6bVZAUT6vZf](https://explorer.solana.com/address/H6vbfTp6XwfFSHWtpzjZuyrx6bpnp8Rwt6bVZAUT6vZf?cluster=devnet) |
-| **Vault PDA** | [HMkL7zzAroE919esVY6HSMYzB2ejHM5m4A8JKCSrgBXR](https://explorer.solana.com/address/HMkL7zzAroE919esVY6HSMYzB2ejHM5m4A8JKCSrgBXR?cluster=devnet) |
-| **Decision Log #1** | [2fAmjTj9WLyNhCuow4YBCAGdDRynqSCGgrpQQcdAHHSijcV7JQsEQcEcycNgiCUT2WSPTFZ1Nx5q7CbJX1aMLN6X](https://explorer.solana.com/tx/2fAmjTj9WLyNhCuow4YBCAGdDRynqSCGgrpQQcdAHHSijcV7JQsEQcEcycNgiCUT2WSPTFZ1Nx5q7CbJX1aMLN6X?cluster=devnet) |
-| **NAV Update #1** | [5VR1pg4ZGtkELaDMPugz7y4sS2miiKhP3mqvkb5TDv1Q3pnS5wEVUpRPVBYdt9h4YCcd7TMxSwuZM4JV79nYB3Ty](https://explorer.solana.com/tx/5VR1pg4ZGtkELaDMPugz7y4sS2miiKhP3mqvkb5TDv1Q3pnS5wEVUpRPVBYdt9h4YCcd7TMxSwuZM4JV79nYB3Ty?cluster=devnet) |
-| **Decision Log #2** | [37ouG2GkzqTkZbCbA6J8oepFTdKZS2rRNLVKyQcSP8Yz2fc5a5uj7Y6AFHrwgPpdnyfdMbCRkab3NuGLg4ws5TRr](https://explorer.solana.com/tx/37ouG2GkzqTkZbCbA6J8oepFTdKZS2rRNLVKyQcSP8Yz2fc5a5uj7Y6AFHrwgPpdnyfdMbCRkab3NuGLg4ws5TRr?cluster=devnet) |
-
-> The agent is currently running continuously via `pm2`. New decision accounts are written every 15 minutes.
-
----
-
-## �📄 License
-
-This project is licensed under the **MIT License** — see the [LICENSE](LICENSE) file for details.
-
----
-
-<p align="center">
-  <strong>Built for the hackathon. Built for transparency. Built on Solana.</strong>
-  <br /><br />
-  <em>Every trade has a reason. Every reason is on-chain. Every agent is accountable.</em>
-</p>
+Built for Solana India Cohort Capstone — May 2026

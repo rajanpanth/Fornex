@@ -14,6 +14,12 @@ pub enum FornexError {
     #[msg("Only the AI agent authority can perform this action")]
     UnauthorizedAgent,
 
+    #[msg("Only the vault admin can perform this action")]
+    UnauthorizedAdmin,
+
+    #[msg("Trading is paused")]
+    TradingPaused,
+
     #[msg("Confidence must be between 0 and 100")]
     InvalidConfidence,
 

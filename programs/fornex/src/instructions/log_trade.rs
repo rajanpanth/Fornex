@@ -14,6 +14,10 @@ pub fn handler(
     require!(direction <= 3, FornexError::InvalidDirection);
     require!(leverage >= 1 && leverage <= 10, FornexError::InvalidLeverage);
     require!(confidence <= 100, FornexError::InvalidConfidence);
+    require!(
+        !ctx.accounts.vault.is_trading_paused,
+        FornexError::TradingPaused
+    );
 
     let vault_key = ctx.accounts.vault.key();
     let vault = &mut ctx.accounts.vault;

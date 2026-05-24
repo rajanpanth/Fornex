@@ -15,6 +15,10 @@ pub fn handler(
     execution_ref: String,
 ) -> Result<()> {
     require!(market.len() <= 16, FornexError::MarketNameTooLong);
+    require!(
+        !ctx.accounts.vault.is_trading_paused,
+        FornexError::TradingPaused
+    );
     validate_vote(&bull_vote)?;
     validate_vote(&bear_vote)?;
     validate_vote(&zen_vote)?;

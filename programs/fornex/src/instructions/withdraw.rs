@@ -11,8 +11,17 @@ pub fn handler(ctx: Context<Withdraw>, shares_to_burn: u64) -> Result<()> {
         FornexError::InsufficientShares
     );
 
-    // Read vault state values before mutable borrows
-    let nav = ctx.accounts.vault.nav;
+    let vault_info = ctx.accounts.vault.to_account_info();
+    let rent = Rent::get()?;
+    let rent_exempt_reserve = rent.minimum_balance(vault_info.data_len());
+    let spendable_lamports = vault_info
+        .lamports()
+        .checked_sub(rent_exempt_reserve)
+        .ok_or(FornexError::InsufficientVaultBalance)?;
+
+    // Read vault state values before mutable borrows. If off-chain NAV is ahead
+    // of actual SOL custody, redeem against real spendable lamports.
+    let nav = ctx.accounts.vault.nav.min(spendable_lamports);
     let total_shares = ctx.accounts.vault.total_shares;
     let user_key = ctx.accounts.user.key();
 
@@ -26,16 +35,21 @@ pub fn handler(ctx: Context<Withdraw>, shares_to_burn: u64) -> Result<()> {
 
     // Transfer lamports from vault PDA → user via AccountInfo manipulation
     // Must be done before any Anchor mutable borrow on vault
-    let vault_info = ctx.accounts.vault.to_account_info();
     let user_info = ctx.accounts.user.to_account_info();
-    **vault_info.try_borrow_mut_lamports()? -= sol_out;
-    **user_info.try_borrow_mut_lamports()? += sol_out;
+    **vault_info.try_borrow_mut_lamports()? = vault_info
+        .lamports()
+        .checked_sub(sol_out)
+        .ok_or(FornexError::InsufficientVaultBalance)?;
+    **user_info.try_borrow_mut_lamports()? = user_info
+        .lamports()
+        .checked_add(sol_out)
+        .ok_or(FornexError::MathOverflow)?;
 
     // Now update Anchor account state (mutable borrows)
     ctx.accounts.vault.total_shares = ctx.accounts.vault.total_shares
         .checked_sub(shares_to_burn)
         .ok_or(FornexError::MathOverflow)?;
-    ctx.accounts.vault.nav = ctx.accounts.vault.nav
+    ctx.accounts.vault.nav = nav
         .checked_sub(sol_out)
         .ok_or(FornexError::MathOverflow)?;
     ctx.accounts.user_deposit.shares = ctx.accounts.user_deposit.shares

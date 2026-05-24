@@ -4,12 +4,19 @@ import { Buffer } from "buffer";
 /* ── Constants ──────────────────────────────────────────── */
 export const PROGRAM_ID = new PublicKey(
   process.env.NEXT_PUBLIC_VAULT_PROGRAM_ID ||
-    "G9rWuMYMbhVSEavQrEUPAwWGT5xewZEibDBkoWQzTEfw"
+    "H6vbfTp6XwfFSHWtpzjZuyrx6bpnp8Rwt6bVZAUT6vZf"
 );
 
 export const VAULT_ADDRESS = new PublicKey(
-  process.env.NEXT_PUBLIC_VAULT_ADDRESS || PublicKey.default.toBase58()
+  process.env.NEXT_PUBLIC_VAULT_ADDRESS ||
+    "HMkL7zzAroE919esVY6HSMYzB2ejHM5m4A8JKCSrgBXR"
 );
+
+export const RPC_URL =
+  process.env.NEXT_PUBLIC_RPC_URL || "https://api.devnet.solana.com";
+
+export const DECISION_ACCOUNT_SIZE =
+  8 + 32 + 4 + 16 + 4 * 203 + 8 + 1 + 88 + 8 + 8 + 1;
 
 /* ── Types ──────────────────────────────────────────────── */
 export type Vote = {

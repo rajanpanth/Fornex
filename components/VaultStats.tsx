@@ -23,6 +23,7 @@ export default function VaultStats({
     userDeposit && userPnlPct !== null
       ? userSharesSol - Number(userDeposit.totalDeposited) / LAMPORTS_PER_SOL
       : 0;
+  const navChangePct = ((nav - 10) / 10) * 100;
 
   return (
     <div className="vault-stats-panel">
@@ -35,8 +36,9 @@ export default function VaultStats({
           <CircleDollarSign size={17} className="vault-stat-icon" />
           <div className="vault-stat-label">Vault NAV</div>
           <div className="vault-stat-value">{nav.toFixed(3)} SOL</div>
-          <div className="vault-stat-sub up">
-            +{((nav - 10) / 10 * 100).toFixed(1)}%
+          <div className={`vault-stat-sub ${navChangePct >= 0 ? "up" : "down"}`}>
+            {navChangePct >= 0 ? "+" : ""}
+            {navChangePct.toFixed(1)}%
           </div>
         </div>
 

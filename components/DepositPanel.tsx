@@ -6,19 +6,28 @@ export default function DepositPanel({
   loading,
   onSubmit,
   nav,
+  userSharesRaw,
 }: {
   walletConnected: boolean;
   loading: boolean;
   onSubmit: (kind: "deposit" | "withdraw", amount: string) => void;
   nav: number;
+  userSharesRaw: bigint;
 }) {
   const [tab, setTab] = useState<"deposit" | "withdraw">("deposit");
   const [amount, setAmount] = useState("0.1");
+  const numericAmount = Number(amount) || 0;
 
-  const preview =
+  const inputLabel = tab === "deposit" ? "Deposit amount" : "Shares to withdraw";
+  const inputUnit = tab === "deposit" ? "SOL" : "SHARES";
+  const previewLabel =
+    tab === "deposit" ? "Estimated vault shares" : "Estimated SOL returned";
+  const previewValue =
     tab === "deposit"
-      ? `You will receive: ${amount || "0"} shares`
-      : `You will receive: ${(Number(amount) * (nav || 1)).toFixed(4)} SOL`;
+      ? `${numericAmount.toFixed(4)} shares`
+      : `${(numericAmount * (nav || 1)).toFixed(4)} SOL`;
+  const maxValue =
+    tab === "deposit" ? "0.1" : formatUnits(userSharesRaw, 9);
 
   return (
     <div className="deposit-panel">
@@ -48,7 +57,7 @@ export default function DepositPanel({
 
       <div className="dw-body">
         <div>
-          <div className="dw-input-label">Amount (SOL)</div>
+          <div className="dw-input-label">{inputLabel}</div>
           <div className="dw-input-wrap">
             <input
               className="dw-input"
@@ -57,18 +66,18 @@ export default function DepositPanel({
               placeholder="0.00"
               inputMode="decimal"
             />
-            <span className="dw-input-suffix">SOL</span>
+            <span className="dw-input-suffix">{inputUnit}</span>
           </div>
           <div style={{ marginTop: 6 }}>
-            <button className="dw-max-btn" onClick={() => setAmount("1.0")}>
+            <button className="dw-max-btn" onClick={() => setAmount(maxValue)}>
               MAX
             </button>
           </div>
         </div>
 
         <div className="dw-preview">
-          <span>Estimated output</span>
-          <strong>{preview.replace("You will receive: ", "")}</strong>
+          <span>{previewLabel}</span>
+          <strong>{previewValue}</strong>
         </div>
 
         {!walletConnected ? (
@@ -91,4 +100,16 @@ export default function DepositPanel({
       </div>
     </div>
   );
+}
+
+function formatUnits(value: bigint, decimals: number): string {
+  const negative = value < 0n;
+  const raw = negative ? -value : value;
+  const scale = 10n ** BigInt(decimals);
+  const whole = raw / scale;
+  const fraction = (raw % scale).toString().padStart(decimals, "0");
+  const trimmed = fraction.replace(/0+$/, "");
+  return `${negative ? "-" : ""}${whole.toString()}${
+    trimmed ? `.${trimmed}` : ""
+  }`;
 }

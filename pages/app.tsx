@@ -11,6 +11,7 @@ import {
   TransactionInstruction,
 } from "@solana/web3.js";
 import { Buffer } from "buffer";
+import { BarChart3, BrainCircuit, Landmark, Repeat2 } from "lucide-react";
 
 import {
   PROGRAM_ID,
@@ -42,6 +43,7 @@ export default function AppDashboard() {
   const [loading, setLoading] = useState(false);
   const [solPrice, setSolPrice] = useState({ price: 0, change: 0 });
   const [priceFlash, setPriceFlash] = useState<"up" | "down" | null>(null);
+  const [mobileTab, setMobileTab] = useState<"vault" | "feed" | "trade" | "stats">("vault");
 
   useEffect(() => { setMounted(true); }, []);
 
@@ -86,7 +88,7 @@ export default function AppDashboard() {
       if (!wallet.publicKey || !wallet.signTransaction) return;
       setLoading(true);
       try {
-        const lamports = Math.round(Number(amount) * LAMPORTS_PER_SOL);
+        const units = parseDecimalUnits(amount, 9);
         const [userDepositPda] = PublicKey.findProgramAddressSync(
           [
             Buffer.from("user_deposit"),
@@ -97,7 +99,7 @@ export default function AppDashboard() {
         );
         const data = Buffer.concat([
           await discriminator("global", kind),
-          u64(BigInt(lamports)),
+          u64(units),
         ]);
         const ix = new TransactionInstruction({
           programId: PROGRAM_ID,
@@ -191,40 +193,90 @@ export default function AppDashboard() {
         <div className="app-grid">
           {/* LEFT COLUMN */}
           <div className="app-col-left">
-            <VaultStats
-              vault={vault}
-              nav={nav}
-              trades={trades}
-              winRate={winRate}
-              userSharesSol={userSharesSol}
-              userPnlPct={userPnlPct}
-              userDeposit={userDeposit}
-            />
-            <PositionPanel />
-            <DepositPanel
-              walletConnected={!!wallet.publicKey}
-              loading={loading}
-              onSubmit={sendVaultIx}
-              nav={nav}
-            />
+            <div className={`mobile-panel mobile-trade ${mobileTab === "trade" ? "active" : ""}`}>
+              <DepositPanel
+                walletConnected={!!wallet.publicKey}
+                loading={loading}
+                onSubmit={sendVaultIx}
+                nav={nav}
+                userSharesRaw={userDeposit?.shares ?? 0n}
+              />
+              <PositionPanel />
+            </div>
+            <div className={`mobile-panel mobile-vault ${mobileTab === "vault" ? "active" : ""}`}>
+              <VaultStats
+                vault={vault}
+                nav={nav}
+                trades={trades}
+                winRate={winRate}
+                userSharesSol={userSharesSol}
+                userPnlPct={userPnlPct}
+                userDeposit={userDeposit}
+              />
+            </div>
           </div>
 
           {/* CENTER COLUMN */}
-          <div className="app-col-center">
+          <div className={`app-col-center mobile-panel mobile-feed ${mobileTab === "feed" ? "active" : ""}`}>
             <DebateFeed decisions={decisions} />
           </div>
 
           {/* RIGHT COLUMN */}
-          <div className="app-col-right">
+          <div className={`app-col-right mobile-panel mobile-stats ${mobileTab === "stats" ? "active" : ""}`}>
             <EquityCurve vault={vault} />
             <AgentPerformanceChart decisions={decisions} />
             <AgentEarnings trades={trades} winRate={winRate} cycle={cycle} />
           </div>
         </div>
+
+        <nav className="mobile-tabbar" aria-label="Mobile dashboard sections">
+          <button
+            className={mobileTab === "vault" ? "active" : ""}
+            onClick={() => setMobileTab("vault")}
+          >
+            <Landmark size={17} />
+            Vault
+          </button>
+          <button
+            className={mobileTab === "feed" ? "active" : ""}
+            onClick={() => setMobileTab("feed")}
+          >
+            <BrainCircuit size={17} />
+            Feed
+          </button>
+          <button
+            className={mobileTab === "trade" ? "active" : ""}
+            onClick={() => setMobileTab("trade")}
+          >
+            <Repeat2 size={17} />
+            Trade
+          </button>
+          <button
+            className={mobileTab === "stats" ? "active" : ""}
+            onClick={() => setMobileTab("stats")}
+          >
+            <BarChart3 size={17} />
+            Stats
+          </button>
+        </nav>
       </div>
 
       {/* TOASTS */}
       <ToastContainer toasts={toasts} onRemove={removeToast} />
     </>
   );
+}
+
+function parseDecimalUnits(value: string, decimals: number): bigint {
+  const normalized = value.trim();
+  if (!normalized || normalized === ".") return 0n;
+
+  const [wholePart, fractionPart = ""] = normalized.split(".");
+  const whole = wholePart.replace(/\D/g, "") || "0";
+  const fraction = fractionPart
+    .replace(/\D/g, "")
+    .slice(0, decimals)
+    .padEnd(decimals, "0");
+
+  return BigInt(whole) * 10n ** BigInt(decimals) + BigInt(fraction || "0");
 }

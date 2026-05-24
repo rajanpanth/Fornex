@@ -1,6 +1,11 @@
 import { useConnection } from "@solana/wallet-adapter-react";
 import { useCallback, useEffect, useState } from "react";
-import { Decision, decodeDecision, PROGRAM_ID } from "../lib/chain";
+import {
+  DECISION_ACCOUNT_SIZE,
+  Decision,
+  decodeDecision,
+  PROGRAM_ID,
+} from "../lib/chain";
 
 export function useDecisions() {
   const { connection } = useConnection();
@@ -11,8 +16,7 @@ export function useDecisions() {
       const accounts = await connection.getProgramAccounts(PROGRAM_ID, {
         filters: [
           {
-            dataSize:
-              8 + 32 + 4 + 16 + 4 * 203 + 8 + 1 + 88 + 8 + 8 + 1,
+            dataSize: DECISION_ACCOUNT_SIZE,
           },
         ],
       });

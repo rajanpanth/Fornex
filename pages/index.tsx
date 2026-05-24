@@ -2,6 +2,8 @@ import Head from "next/head";
 import Link from "next/link";
 import { useEffect, useRef, useState } from "react";
 import { motion, useMotionValue, useSpring, useTransform } from "framer-motion";
+import { Connection } from "@solana/web3.js";
+import { Buffer } from "buffer";
 import {
   ArrowRight,
   Bot,
@@ -17,6 +19,15 @@ import {
   Sparkles,
   WalletCards,
 } from "lucide-react";
+import {
+  DECISION_ACCOUNT_SIZE,
+  Decision,
+  PROGRAM_ID,
+  RPC_URL,
+  decodeDecision,
+  dirLabel,
+  formatTimeAgo,
+} from "../lib/chain";
 
 const stats = [
   ["3", "Specialized agents"],
@@ -143,6 +154,92 @@ function CodeWindow() {
         <p className="terminal-consensus">CONSENSUS: LONG · 72% · TX READY</p>
       </div>
     </motion.div>
+  );
+}
+
+function LiveDecisionPreview() {
+  const [liveDecisions, setLiveDecisions] = useState<Decision[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    let cancelled = false;
+
+    async function fetchLive() {
+      try {
+        const connection = new Connection(RPC_URL, "confirmed");
+        const accounts = await connection.getProgramAccounts(PROGRAM_ID, {
+          filters: [{ dataSize: DECISION_ACCOUNT_SIZE }],
+        });
+        const decoded = accounts
+          .map(({ pubkey, account }) =>
+            decodeDecision(pubkey, Buffer.from(account.data))
+          )
+          .filter(Boolean)
+          .sort((a, b) => b!.timestamp - a!.timestamp)
+          .slice(0, 3) as Decision[];
+
+        if (!cancelled) setLiveDecisions(decoded);
+      } catch (error) {
+        console.warn("[landing] live decisions fetch failed", error);
+      } finally {
+        if (!cancelled) setLoading(false);
+      }
+    }
+
+    void fetchLive();
+    const interval = setInterval(() => void fetchLive(), 30_000);
+    return () => {
+      cancelled = true;
+      clearInterval(interval);
+    };
+  }, []);
+
+  return (
+    <section className="live-decisions-section">
+      <div className="live-decisions-copy reveal">
+        <div className="section-kicker">LIVE ON-CHAIN DECISIONS</div>
+        <h2 className="section-heading">Watch the agents work. Right now. Live.</h2>
+        <p className="section-copy">
+          No wallet needed. These are real decisions stored permanently on
+          Solana devnet.
+        </p>
+      </div>
+
+      <div className="live-decision-grid">
+        {loading && liveDecisions.length === 0 ? (
+          <div className="live-decision-empty reveal">Reading Solana devnet...</div>
+        ) : liveDecisions.length === 0 ? (
+          <div className="live-decision-empty reveal">Waiting for on-chain decisions.</div>
+        ) : (
+          liveDecisions.map((decision) => {
+            const direction = dirLabel(decision.consensus.direction);
+            return (
+              <Link
+                href="/app"
+                className={`live-decision-card reveal ${direction.toLowerCase()}`}
+                key={decision.pubkey.toBase58()}
+              >
+                <div className="live-decision-top">
+                  <span>{decision.market || "SOL-PERP"}</span>
+                  <b>{formatTimeAgo(decision.timestamp)}</b>
+                </div>
+                <div className="live-decision-main">
+                  <strong>{direction}</strong>
+                  <span>{decision.consensus.leverage}x</span>
+                  <span>{decision.consensus.confidence}%</span>
+                </div>
+                <p>{decision.consensus.reasoning || "Consensus logged on-chain."}</p>
+                <code>{decision.pubkey.toBase58()}</code>
+              </Link>
+            );
+          })
+        )}
+      </div>
+
+      <Link href="/app" className="live-decision-link reveal">
+        View all decisions <ArrowRight size={17} />
+      </Link>
+    </section>
   );
 }
 
@@ -343,6 +440,8 @@ export default function LandingPage() {
               ))}
             </div>
           </section>
+
+          <LiveDecisionPreview />
 
           <section className="wide-product" id="protocol">
             <div className="section-kicker reveal">FROM SIGNAL TO EXECUTION</div>

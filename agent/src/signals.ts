@@ -3,6 +3,7 @@ import { connection, DRIFT_ENV } from "./config";
 import type { MarketSignals } from "./types";
 
 const SOL_PERP_MARKET_INDEX = 0;
+const FUNDING_RATE_PRECISION = 1e9;
 let previousOi: { value: number; timestamp: number } | null = null;
 
 export async function fetchSignals(): Promise<MarketSignals> {
@@ -96,14 +97,22 @@ function numberFromDrift(value: any): number {
 
 function getFundingRate(driftClient: any, perpMarket: any): number {
   try {
-    const rate =
+    const rawRate =
       driftClient.getFundingRate?.(SOL_PERP_MARKET_INDEX) ??
       perpMarket?.amm?.lastFundingRate ??
       0;
-    return round(numberFromDrift(rate) * 100);
+    const hourlyPct = (rawNumber(rawRate) / FUNDING_RATE_PRECISION) * 100;
+    return round(hourlyPct);
   } catch {
     return 0;
   }
+}
+
+function rawNumber(value: any): number {
+  if (!value) return 0;
+  if (typeof value === "number") return value;
+  if (typeof value.toNumber === "function") return value.toNumber();
+  return Number(value) || 0;
 }
 
 function getOpenInterest(perpMarket: any): number {
@@ -165,3 +174,14 @@ function round(value: number): number {
   return Number.isFinite(value) ? Number(value.toFixed(4)) : 0;
 }
 
+if (require.main === module) {
+  fetchSignals()
+    .then((signals) => {
+      console.log("signals:", signals);
+      console.log(`fundingRate: ${signals.fundingRate}%/hr`);
+    })
+    .catch((error) => {
+      console.error("[signals] test failed", error);
+      process.exit(1);
+    });
+}

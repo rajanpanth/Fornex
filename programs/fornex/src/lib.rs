@@ -72,4 +72,12 @@ pub mod fornex {
     pub fn update_nav(ctx: Context<UpdateNav>, new_nav: u64) -> Result<()> {
         instructions::update_nav::handler(ctx, new_nav)
     }
+
+    pub fn emergency_pause(ctx: Context<EmergencyPause>) -> Result<()> {
+        instructions::emergency_pause::pause(ctx)
+    }
+
+    pub fn resume(ctx: Context<EmergencyPause>) -> Result<()> {
+        instructions::emergency_pause::resume(ctx)
+    }
 }
