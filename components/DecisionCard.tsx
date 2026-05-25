@@ -127,13 +127,20 @@ export default function DecisionCard({ decision }: { decision: Decision }) {
         </strong>
       </div>
 
-      {decision.solPriceVerified > 0 && (
+      {decision.solPriceVerified > 0 ? (
         <div
           className="dc-pyth-price"
           title="Price verified on-chain via Pyth oracle"
         >
           SOL at decision: ${(decision.solPriceVerified / 1e8).toFixed(2)}{" "}
           <span>Pyth verified ✓</span>
+        </div>
+      ) : (
+        <div
+          className="dc-pyth-price dc-pyth-unavailable"
+          title="Pyth price was not available at time of decision"
+        >
+          <span>Pyth price unavailable at decision time</span>
         </div>
       )}
 

@@ -13,11 +13,13 @@
 
 | Resource | Link |
 |---|---|
+| Live App | https://YOUR-VERCEL-DOMAIN.vercel.app |
+| Demo Video | https://YOUR-DEMO-VIDEO-LINK |
 | Program | https://explorer.solana.com/address/H6vbfTp6XwfFSHWtpzjZuyrx6bpnp8Rwt6bVZAUT6vZf?cluster=devnet |
 | Vault | https://explorer.solana.com/address/HMkL7zzAroE919esVY6HSMYzB2ejHM5m4A8JKCSrgBXR?cluster=devnet |
 | $FNRX Mint | https://explorer.solana.com/address/BNBf6ed4h8dZiVd8wpUkcv8BUyFsp75eidkcUhSb94vj?cluster=devnet |
 | Agent Running Since | May 24, 2026 |
-| Decisions On-Chain | 29 (growing every 15 min) |
+| Decisions On-Chain | Live, growing every 15 min |
 
 ## What Makes Fornex Technically Heavy
 
@@ -34,7 +36,7 @@
 
 | Feature | Implementation | Depth |
 |---|---|---|
-| Vault Shares | Real SPL Token ($FNRX) | Token Program CPI |
+| Vault Shares | Real SPL Token ($FNRX) | Token Program CPI mint/burn |
 | Price Feed | Pyth Oracle on-chain | External Program CPI |
 | NAV History | On-chain NavRecord accounts | Custom PDA indexing |
 | Real-time Feed | Helius webhook + SSE | Blockchain indexing |
@@ -42,6 +44,9 @@
 | AI Agents | Azure GPT-4o × 3 | Multi-agent consensus |
 | Payments | pay.sh streaming | Agentic micropayments |
 | Transparency | On-chain reasoning | Permanent + auditable |
+| Strategy Orders | Live order panel on /app | Decoded from chain |
+| Live Landing Page | On-chain decisions, no wallet | getProgramAccounts |
+| Status Bar | Pyth / RPC / Priority fee | Live health checks |
 
 ## Screenshots
 
@@ -153,6 +158,7 @@ NAV updates -> share price changes -> user P&L changes
 | deposit | User sends SOL, receives proportional $FNRX |
 | withdraw | Burns $FNRX, returns proportional SOL |
 | log_multi_agent_decision | Stores all 3 votes plus Pyth price on-chain permanently |
+| log_trade | Records individual trade execution reference |
 | update_nav | Updates vault value after trade settles |
 | record_nav_snapshot | Creates an immutable NavRecord PDA |
 | emergency_pause | Halts agent trading (safety switch) |
@@ -174,6 +180,9 @@ cd frontend && npm install && cd ..
 cp agent/.env.example agent/.env
 cp frontend/.env.local.example frontend/.env.local
 # Fill in your values
+
+# Note: anchor build requires a path without spaces on Windows.
+# Clone to a path like C:\fornex or ~/fornex before running anchor build.
 
 # 4. Run frontend
 npm run dev -- -p 3001
@@ -212,6 +221,14 @@ performance chart can be rebuilt directly from Solana account history.
 |---|---|
 | Deposit 0.5 SOL | https://solscan.io/tx/4AQNwfbUs1Z3cbo7VLreCeLgrrh1r7PnCzoKQzYQoL97JgQiQw4TWeiHpJsjvy6roAwq9F4BSqdukfsEcBsZRvRj?cluster=devnet |
 | Withdraw SOL | https://solscan.io/tx/4bfNiVKpZFKAzYvNmkUbbF2xzPGQKsq8faUqsKMFjbz6VzN2ef1qNFWMZahP3ScHQ7sropae9DfLcj5khVcbtwR1?cluster=devnet |
+
+---
+
+## Disclaimer
+
+This is a **Solana devnet hackathon prototype**. It is not audited, not deployed
+on mainnet, and not intended for real user funds. All transactions use devnet SOL
+with no real monetary value.
 
 ---
 

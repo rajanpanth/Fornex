@@ -160,7 +160,7 @@ function CodeWindow() {
 
 function LiveDecisionPreview() {
   const [liveDecisions, setLiveDecisions] = useState<Decision[]>([]);
-  const [decisionCount, setDecisionCount] = useState(27);
+  const [decisionCount, setDecisionCount] = useState<number | null>(null);
   const [nextLabel, setNextLabel] = useState("08:42");
   const [loading, setLoading] = useState(true);
 
@@ -224,7 +224,10 @@ function LiveDecisionPreview() {
           Stored permanently on Solana.
         </p>
         <div className="live-chain-counter">
-          {decisionCount} decisions on-chain | Next in {nextLabel}
+          {decisionCount === null
+            ? "Loading on-chain decisions…"
+            : `${decisionCount} decisions on-chain`}{" "}
+          {decisionCount !== null && `| Next in ${nextLabel}`}
         </div>
       </div>
 
@@ -248,9 +251,9 @@ function LiveDecisionPreview() {
                 </div>
                 <div className="live-decision-main">
                   <strong>{direction}</strong>
-                  <span>BULL</span>
-                  <span>BEAR</span>
-                  <span>ZEN</span>
+                  <span>BULL {dirLabel(decision.bullVote.direction)}</span>
+                  <span>BEAR {dirLabel(decision.bearVote.direction)}</span>
+                  <span>ZEN {dirLabel(decision.zenVote.direction)}</span>
                   <span>{decision.consensus.leverage}x</span>
                   <span>{decision.consensus.confidence}%</span>
                 </div>
