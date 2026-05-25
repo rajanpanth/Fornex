@@ -18,7 +18,9 @@ export const VAULT_MINT_ADDRESS = new PublicKey(
 );
 
 export const RPC_URL =
-  process.env.NEXT_PUBLIC_RPC_URL || "https://api.devnet.solana.com";
+  process.env.NEXT_PUBLIC_HELIUS_RPC_URL ||
+  process.env.NEXT_PUBLIC_RPC_URL ||
+  "https://api.devnet.solana.com";
 
 export const DECISION_ACCOUNT_SIZE =
   8 + 32 + 4 + 16 + 4 * 203 + 8 + 1 + 88 + 8 + 8 + 8 + 8 + 1;

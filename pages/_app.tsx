@@ -13,7 +13,9 @@ const SolanaWalletModalProvider = WalletModalProvider as any;
 
 export default function App({ Component, pageProps }: AppProps) {
   const endpoint =
-    process.env.NEXT_PUBLIC_RPC_URL || "https://api.devnet.solana.com";
+    process.env.NEXT_PUBLIC_HELIUS_RPC_URL ||
+    process.env.NEXT_PUBLIC_RPC_URL ||
+    "https://api.devnet.solana.com";
   const wallets = useMemo(
     () => [new PhantomWalletAdapter(), new SolflareWalletAdapter()],
     []
