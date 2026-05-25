@@ -10,7 +10,7 @@ Fornex Protocol is a Solana devnet AI trading vault where users deposit devnet S
 
 | Resource | Link |
 |---|---|
-| Live App | https://YOUR-VERCEL-DOMAIN.vercel.app |
+| Live App | hhttps://fornexlab.vercel.app/ |
 | Demo Video | https://YOUR-DEMO-VIDEO-LINK |
 | GitHub | https://github.com/YOUR_USERNAME/fornex-protocol |
 | Program Explorer | https://explorer.solana.com/address/H6vbfTp6XwfFSHWtpzjZuyrx6bpnp8Rwt6bVZAUT6vZf?cluster=devnet |
@@ -95,11 +95,35 @@ NEXT_PUBLIC_HELIUS_RPC_URL=  (optional: Helius RPC for higher rate limits)
 
 ## Helius Webhook Setup
 
-Configure in Helius dashboard:
-- **Account Addresses**: `H6vbfTp6XwfFSHWtpzjZuyrx6bpnp8Rwt6bVZAUT6vZf`
-- **Transaction Types**: `PROGRAM_INTERACTION`
-- **Webhook URL**: `https://YOUR-VERCEL-DOMAIN.vercel.app/api/webhook`
-- **Webhook Type**: `enhanced`
+Configure in the [Helius dashboard](https://dev.helius.xyz/dashboard/app):
+
+| Setting | Value |
+|---|---|
+| Account Addresses | `H6vbfTp6XwfFSHWtpzjZuyrx6bpnp8Rwt6bVZAUT6vZf` |
+| Transaction Types | `PROGRAM_INTERACTION` |
+| Webhook Type | `enhanced` |
+| Webhook URL | `https://fornexlab.vercel.app/api/webhook` |
+
+**Step-by-step:**
+1. Open the Helius dashboard → Webhooks → Create Webhook
+2. Set **Account Address** to `H6vbfTp6XwfFSHWtpzjZuyrx6bpnp8Rwt6bVZAUT6vZf`
+3. Set **Transaction Type** to `PROGRAM_INTERACTION`
+4. Set **Webhook Type** to `enhanced`
+5. Set **Webhook URL** to `https://fornexlab.vercel.app/api/webhook`
+6. Save the webhook
+7. Trigger a new Fornex agent decision (or wait up to 15 min for next cycle)
+8. The frontend listens to `/api/events` via SSE and shows a ⚡ **NEW DECISION** badge; 30-second polling remains as fallback
+
+**SSE note:** Vercel serverless functions do not hold persistent connections between invocations. The SSE stream is best-effort (works within a single cold-start window); the 30-second polling fallback ensures the UI stays current regardless.
+
+**Local test (no Helius API key required):**
+```bash
+curl -X POST http://localhost:3000/api/webhook \
+  -H "Content-Type: application/json" \
+  -d '[{"accountData":[{"account":"H6vbfTp6XwfFSHWtpzjZuyrx6bpnp8Rwt6bVZAUT6vZf"}],"type":"PROGRAM_INTERACTION"}]'
+# Expected: {"received":true,"matched":1}
+```
+Then open `http://localhost:3000/app` — the page should not crash and may show the ⚡ badge if the SSE connection was active.
 
 ## Build Notes
 

@@ -13,7 +13,7 @@
 
 | Resource | Link |
 |---|---|
-| Live App | https://YOUR-VERCEL-DOMAIN.vercel.app |
+| Live App | https://fornexlab.vercel.app/ |
 | Demo Video | https://YOUR-DEMO-VIDEO-LINK |
 | Program | https://explorer.solana.com/address/H6vbfTp6XwfFSHWtpzjZuyrx6bpnp8Rwt6bVZAUT6vZf?cluster=devnet |
 | Vault | https://explorer.solana.com/address/HMkL7zzAroE919esVY6HSMYzB2ejHM5m4A8JKCSrgBXR?cluster=devnet |
@@ -192,6 +192,39 @@ cd agent && pm2 start "npx ts-node src/index.ts" --name fornex-agent
 
 # 6. View live
 open http://localhost:3001
+```
+
+## Helius Webhook Setup
+
+Configure in the [Helius dashboard](https://dev.helius.xyz/dashboard/app) to enable live blockchain event indexing:
+
+| Setting | Value |
+|---|---|
+| Account Addresses | `H6vbfTp6XwfFSHWtpzjZuyrx6bpnp8Rwt6bVZAUT6vZf` |
+| Transaction Types | `PROGRAM_INTERACTION` |
+| Webhook Type | `enhanced` |
+| Webhook URL | `https://fornexlab.vercel.app/api/webhook` |
+
+**Step-by-step:**
+1. Open Helius dashboard → Webhooks → Create Webhook
+2. Set Account Address to `H6vbfTp6XwfFSHWtpzjZuyrx6bpnp8Rwt6bVZAUT6vZf`
+3. Set Transaction Type to `PROGRAM_INTERACTION`
+4. Set Webhook Type to `enhanced`
+5. Set Webhook URL to `https://fornexlab.vercel.app/api/webhook`
+6. Save the webhook
+7. Trigger a new Fornex agent decision or wait for the next 15-minute cycle
+8. The frontend listens to `/api/events` via SSE and shows a ⚡ **NEW DECISION** badge; 30-second polling is the fallback
+
+> **Note:** Vercel serverless functions do not hold persistent connections.
+> SSE is best-effort (works within a single cold-start window).
+> The 30-second polling fallback keeps the UI current regardless.
+
+**Local test (no Helius API key required):**
+```bash
+curl -X POST http://localhost:3001/api/webhook \
+  -H "Content-Type: application/json" \
+  -d '[{"accountData":[{"account":"H6vbfTp6XwfFSHWtpzjZuyrx6bpnp8Rwt6bVZAUT6vZf"}],"type":"PROGRAM_INTERACTION"}]'
+# Expected: {"received":true,"matched":1}
 ```
 
 ## On-Chain Proof
