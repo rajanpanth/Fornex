@@ -3,12 +3,12 @@
   "version": "0.1.0",
   "description": "Fornex Protocol — Autonomous AI Perp Trading Vault on Solana",
   "scripts": {
-    "build": "anchor build",
+    "build": "next build",
     "test": "anchor test",
     "deploy": "anchor deploy",
     "agent": "ts-node agent/src/index.ts",
     "dev": "next dev",
-    "frontend:build": "next build"
+    "anchor:build": "anchor build"
   },
   "dependencies": {
     "@coral-xyz/anchor": "^0.30.1",
