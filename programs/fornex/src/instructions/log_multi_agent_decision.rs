@@ -1,7 +1,11 @@
 use anchor_lang::prelude::*;
+use pyth_solana_receiver_sdk::price_update::{get_feed_id_from_hex, PriceUpdateV2};
 
 use crate::errors::FornexError;
 use crate::state::{AgentVote, AgentVoteInput, MultiAgentDecision, Vault};
+
+const SOL_USD_FEED_ID: &str =
+    "ef0d8b6fda2ceba41da15d4095d1da392a0d2f8ed0c6c7bc0f4cfac8c280b56d";
 
 pub fn handler(
     ctx: Context<LogMultiAgentDecision>,
@@ -47,6 +51,17 @@ pub fn handler(
     decision.execution_ref = fixed_bytes::<88>(&execution_ref);
     decision.pnl_lamports = 0;
     decision.timestamp = clock.unix_timestamp;
+    let maybe_sol_price = ctx
+        .accounts
+        .price_update
+        .get_price_no_older_than(&clock, 60, &get_feed_id_from_hex(SOL_USD_FEED_ID)?);
+    if let Ok(sol_price) = maybe_sol_price {
+        decision.sol_price_verified = sol_price.price.max(0) as u64;
+        decision.price_confidence = sol_price.conf;
+    } else {
+        decision.sol_price_verified = 0;
+        decision.price_confidence = 0;
+    }
     decision.bump = ctx.bumps.decision;
 
     emit!(MultiAgentDecisionEvent {
@@ -144,6 +159,8 @@ pub struct LogMultiAgentDecision<'info> {
         bump
     )]
     pub decision: Account<'info, MultiAgentDecision>,
+
+    pub price_update: Account<'info, PriceUpdateV2>,
 
     #[account(mut)]
     pub agent: Signer<'info>,

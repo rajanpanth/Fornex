@@ -5,6 +5,8 @@ pub mod log_trade;
 pub mod log_multi_agent_decision;
 pub mod update_nav;
 pub mod emergency_pause;
+pub mod migrate_vault_v2;
+pub mod record_nav_snapshot;
 
 pub use initialize_vault::*;
 pub use deposit::*;
@@ -13,3 +15,5 @@ pub use log_trade::*;
 pub use log_multi_agent_decision::*;
 pub use update_nav::*;
 pub use emergency_pause::*;
+pub use migrate_vault_v2::*;
+pub use record_nav_snapshot::*;

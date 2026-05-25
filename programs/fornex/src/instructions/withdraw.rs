@@ -1,6 +1,7 @@
-use anchor_lang::prelude::*;
-use crate::state::{Vault, UserDeposit};
 use crate::errors::FornexError;
+use crate::state::{UserDeposit, Vault};
+use anchor_lang::prelude::*;
+use anchor_spl::token::{self, Burn, Mint, Token, TokenAccount};
 
 pub fn handler(ctx: Context<Withdraw>, shares_to_burn: u64) -> Result<()> {
     require!(shares_to_burn > 0, FornexError::InsufficientShares);
@@ -33,6 +34,18 @@ pub fn handler(ctx: Context<Withdraw>, shares_to_burn: u64) -> Result<()> {
 
     require!(sol_out > 0, FornexError::InsufficientVaultBalance);
 
+    token::burn(
+        CpiContext::new(
+            ctx.accounts.token_program.to_account_info(),
+            Burn {
+                mint: ctx.accounts.vault_mint.to_account_info(),
+                from: ctx.accounts.user_token_account.to_account_info(),
+                authority: ctx.accounts.user.to_account_info(),
+            },
+        ),
+        shares_to_burn,
+    )?;
+
     // Transfer lamports from vault PDA → user via AccountInfo manipulation
     // Must be done before any Anchor mutable borrow on vault
     let user_info = ctx.accounts.user.to_account_info();
@@ -46,19 +59,25 @@ pub fn handler(ctx: Context<Withdraw>, shares_to_burn: u64) -> Result<()> {
         .ok_or(FornexError::MathOverflow)?;
 
     // Now update Anchor account state (mutable borrows)
-    ctx.accounts.vault.total_shares = ctx.accounts.vault.total_shares
+    ctx.accounts.vault.total_shares = ctx
+        .accounts
+        .vault
+        .total_shares
         .checked_sub(shares_to_burn)
         .ok_or(FornexError::MathOverflow)?;
-    ctx.accounts.vault.nav = nav
-        .checked_sub(sol_out)
-        .ok_or(FornexError::MathOverflow)?;
-    ctx.accounts.user_deposit.shares = ctx.accounts.user_deposit.shares
+    ctx.accounts.vault.nav = nav.checked_sub(sol_out).ok_or(FornexError::MathOverflow)?;
+    ctx.accounts.user_deposit.shares = ctx
+        .accounts
+        .user_deposit
+        .shares
         .checked_sub(shares_to_burn)
         .ok_or(FornexError::MathOverflow)?;
 
     msg!(
         "Withdraw: {} shares burned → {} lamports returned to {}",
-        shares_to_burn, sol_out, user_key
+        shares_to_burn,
+        sol_out,
+        user_key
     );
 
     Ok(())
@@ -75,6 +94,22 @@ pub struct Withdraw<'info> {
 
     #[account(
         mut,
+        seeds = [b"vault_mint", vault.key().as_ref()],
+        bump,
+        mint::decimals = 9,
+        mint::authority = vault
+    )]
+    pub vault_mint: Account<'info, Mint>,
+
+    #[account(
+        mut,
+        associated_token::mint = vault_mint,
+        associated_token::authority = user
+    )]
+    pub user_token_account: Account<'info, TokenAccount>,
+
+    #[account(
+        mut,
         seeds = [b"user_deposit", vault.key().as_ref(), user.key().as_ref()],
         bump = user_deposit.bump,
         constraint = user_deposit.owner == user.key()
@@ -84,5 +119,6 @@ pub struct Withdraw<'info> {
     #[account(mut)]
     pub user: Signer<'info>,
 
+    pub token_program: Program<'info, Token>,
     pub system_program: Program<'info, System>,
 }

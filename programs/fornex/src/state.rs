@@ -13,6 +13,7 @@ pub struct Vault {
     pub is_trading_paused: bool,
     pub created_at: i64,
     pub bump: u8,
+    pub nav_record_count: u64,
 }
 
 #[account]
@@ -73,5 +74,18 @@ pub struct MultiAgentDecision {
     pub execution_ref: [u8; 88],
     pub pnl_lamports: i64,
     pub timestamp: i64,
+    pub sol_price_verified: u64,
+    pub price_confidence: u64,
+    pub bump: u8,
+}
+
+#[account]
+#[derive(InitSpace)]
+pub struct NavRecord {
+    pub vault: Pubkey,
+    pub nav: u64,
+    pub timestamp: i64,
+    pub record_index: u64,
+    pub trade_count: u64,
     pub bump: u8,
 }

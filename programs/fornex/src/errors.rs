@@ -46,4 +46,7 @@ pub enum FornexError {
 
     #[msg("Vault NAV cannot be zero when shares exist")]
     ZeroNav,
+
+    #[msg("Deposit would mint zero vault shares")]
+    ZeroShares,
 }

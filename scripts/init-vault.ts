@@ -14,9 +14,11 @@ import {
   Keypair,
   PublicKey,
   SystemProgram,
+  SYSVAR_RENT_PUBKEY,
   Transaction,
   TransactionInstruction,
 } from "@solana/web3.js";
+import { TOKEN_PROGRAM_ID } from "@solana/spl-token";
 import * as fs from "fs";
 import * as path from "path";
 import * as os from "os";
@@ -64,20 +66,56 @@ async function main() {
     [Buffer.from("vault")],
     PROGRAM_ID
   );
+  const [vaultMintPDA] = PublicKey.findProgramAddressSync(
+    [Buffer.from("vault_mint"), vaultPDA.toBuffer()],
+    PROGRAM_ID
+  );
   console.log("Vault PDA:", vaultPDA.toBase58());
+  console.log("$FNRX mint PDA:", vaultMintPDA.toBase58());
   console.log("Vault bump:", bump);
 
   // Check if vault already exists
   const existing = await connection.getAccountInfo(vaultPDA);
   if (existing) {
-    console.log("\n⚠️  Vault already initialized! Skipping.");
+    const existingMint = await connection.getAccountInfo(vaultMintPDA);
+    if (existingMint) {
+      console.log("\n⚠️  Vault and $FNRX mint already initialized! Skipping.");
+      console.log("Vault address:", vaultPDA.toBase58());
+      console.log("$FNRX mint:", vaultMintPDA.toBase58());
+      process.exit(0);
+    }
+
+    const ix = new TransactionInstruction({
+      programId: PROGRAM_ID,
+      keys: [
+        { pubkey: vaultPDA, isSigner: false, isWritable: false },
+        { pubkey: vaultMintPDA, isSigner: false, isWritable: true },
+        { pubkey: admin.publicKey, isSigner: true, isWritable: true },
+        { pubkey: TOKEN_PROGRAM_ID, isSigner: false, isWritable: false },
+        { pubkey: SystemProgram.programId, isSigner: false, isWritable: false },
+        { pubkey: SYSVAR_RENT_PUBKEY, isSigner: false, isWritable: false },
+      ],
+      data: discriminator("global", "initialize_vault_mint"),
+    });
+
+    const tx = new Transaction().add(ix);
+    tx.feePayer = admin.publicKey;
+    tx.recentBlockhash = (await connection.getLatestBlockhash()).blockhash;
+    tx.sign(admin);
+
+    console.log("\nSending initialize_vault_mint transaction...");
+    const sig = await connection.sendRawTransaction(tx.serialize());
+    await connection.confirmTransaction(sig, "confirmed");
+    console.log("\n✅ $FNRX mint initialized successfully!");
+    console.log("Transaction:", sig);
     console.log("Vault address:", vaultPDA.toBase58());
+    console.log("$FNRX mint:", vaultMintPDA.toBase58());
     process.exit(0);
   }
 
   // Build instruction data: discriminator + agent_authority pubkey
   const data = Buffer.concat([
-    discriminator("global", "initialize_vault"),
+    discriminator("global", "initialize_vault_with_mint"),
     agentPubkey.toBuffer(),
   ]);
 
@@ -86,8 +124,11 @@ async function main() {
     programId: PROGRAM_ID,
     keys: [
       { pubkey: vaultPDA, isSigner: false, isWritable: true },
+      { pubkey: vaultMintPDA, isSigner: false, isWritable: true },
       { pubkey: admin.publicKey, isSigner: true, isWritable: true },
+      { pubkey: TOKEN_PROGRAM_ID, isSigner: false, isWritable: false },
       { pubkey: SystemProgram.programId, isSigner: false, isWritable: false },
+      { pubkey: SYSVAR_RENT_PUBKEY, isSigner: false, isWritable: false },
     ],
     data,
   });
@@ -105,6 +146,7 @@ async function main() {
   console.log("\n✅ Vault initialized successfully!");
   console.log("Transaction:", sig);
   console.log("Vault address:", vaultPDA.toBase58());
+  console.log("$FNRX mint:", vaultMintPDA.toBase58());
   console.log(
     "\nExplorer:",
     `https://explorer.solana.com/tx/${sig}?cluster=devnet`

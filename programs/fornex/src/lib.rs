@@ -2,10 +2,14 @@
 #![allow(unexpected_cfgs)]
 
 use anchor_lang::prelude::*;
+pub use anchor_spl::associated_token::AssociatedToken;
+pub use anchor_spl::token::{
+    self, Burn, Mint, MintTo, Token, TokenAccount, Transfer as TokenTransfer,
+};
 
+pub mod errors;
 pub mod instructions;
 pub mod state;
-pub mod errors;
 
 use instructions::*;
 use state::AgentVoteInput;
@@ -16,11 +20,19 @@ declare_id!("H6vbfTp6XwfFSHWtpzjZuyrx6bpnp8Rwt6bVZAUT6vZf");
 pub mod fornex {
     use super::*;
 
-    pub fn initialize_vault(
-        ctx: Context<InitializeVault>,
+    pub fn initialize_vault(ctx: Context<InitializeVault>, agent_authority: Pubkey) -> Result<()> {
+        instructions::initialize_vault::handler(ctx, agent_authority)
+    }
+
+    pub fn initialize_vault_with_mint(
+        ctx: Context<InitializeVaultWithMint>,
         agent_authority: Pubkey,
     ) -> Result<()> {
-        instructions::initialize_vault::handler(ctx, agent_authority)
+        instructions::initialize_vault::handler_with_mint(ctx, agent_authority)
+    }
+
+    pub fn initialize_vault_mint(ctx: Context<InitializeVaultMint>) -> Result<()> {
+        instructions::initialize_vault::handler_mint_for_existing_vault(ctx)
     }
 
     pub fn deposit(ctx: Context<Deposit>, amount: u64) -> Result<()> {
@@ -71,6 +83,14 @@ pub mod fornex {
 
     pub fn update_nav(ctx: Context<UpdateNav>, new_nav: u64) -> Result<()> {
         instructions::update_nav::handler(ctx, new_nav)
+    }
+
+    pub fn migrate_vault_v2(ctx: Context<MigrateVaultV2>) -> Result<()> {
+        instructions::migrate_vault_v2::handler(ctx)
+    }
+
+    pub fn record_nav_snapshot(ctx: Context<RecordNavSnapshot>) -> Result<()> {
+        instructions::record_nav_snapshot::handler(ctx)
     }
 
     pub fn emergency_pause(ctx: Context<EmergencyPause>) -> Result<()> {

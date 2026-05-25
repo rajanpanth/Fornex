@@ -45,6 +45,8 @@ export default function DecisionCard({ decision }: { decision: Decision }) {
   const votes = [decision.bullVote, decision.bearVote, decision.zenVote];
   const longCount = votes.filter((v) => v.direction === 1).length;
   const shortCount = votes.filter((v) => v.direction === 2).length;
+  const flatCount = votes.filter((v) => v.direction === 0).length;
+  const winningCount = Math.max(longCount, shortCount, flatCount);
 
   const consensusStr =
     dir === "LONG"
@@ -115,6 +117,26 @@ export default function DecisionCard({ decision }: { decision: Decision }) {
         <AgentRow name="ZEN" vote={decision.zenVote} />
       </div>
 
+      <div className="dc-vote-breakdown">
+        <span>Vote breakdown:</span>
+        <VoteBreakdownRow label="LONG" count={longCount} winning={dir === "LONG"} />
+        <VoteBreakdownRow label="FLAT" count={flatCount} winning={dir === "FLAT"} />
+        <VoteBreakdownRow label="SHORT" count={shortCount} winning={dir === "SHORT"} />
+        <strong className={`dc-vote-badge ${sameDirection === 3 ? "unanimous" : "majority"}`}>
+          {sameDirection === 3 ? "UNANIMOUS" : `${winningCount}/3 MAJORITY`}
+        </strong>
+      </div>
+
+      {decision.solPriceVerified > 0 && (
+        <div
+          className="dc-pyth-price"
+          title="Price verified on-chain via Pyth oracle"
+        >
+          SOL at decision: ${(decision.solPriceVerified / 1e8).toFixed(2)}{" "}
+          <span>Pyth verified ✓</span>
+        </div>
+      )}
+
       <div className={`dc-footer ${footerCls}`}>
         <span className={`dc-consensus ${cls}`}>
           CONSENSUS: {consensusStr}
@@ -160,6 +182,30 @@ export default function DecisionCard({ decision }: { decision: Decision }) {
         </div>
       )}
     </article>
+  );
+}
+
+function VoteBreakdownRow({
+  label,
+  count,
+  winning,
+}: {
+  label: string;
+  count: number;
+  winning: boolean;
+}) {
+  return (
+    <div className="dc-vote-row">
+      <div className="dc-vote-bar">
+        <span
+          className={winning ? "winning" : ""}
+          style={{ width: `${(count / 3) * 100}%` }}
+        />
+      </div>
+      <code>
+        {label} {count}/3 agents
+      </code>
+    </div>
   );
 }
 

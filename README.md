@@ -15,8 +15,33 @@
 |---|---|
 | Program | https://explorer.solana.com/address/H6vbfTp6XwfFSHWtpzjZuyrx6bpnp8Rwt6bVZAUT6vZf?cluster=devnet |
 | Vault | https://explorer.solana.com/address/HMkL7zzAroE919esVY6HSMYzB2ejHM5m4A8JKCSrgBXR?cluster=devnet |
+| $FNRX Mint | https://explorer.solana.com/address/BNBf6ed4h8dZiVd8wpUkcv8BUyFsp75eidkcUhSb94vj?cluster=devnet |
 | Agent Running Since | May 24, 2026 |
-| Decisions On-Chain | 25 (growing every 15 min) |
+| Decisions On-Chain | 29 (growing every 15 min) |
+
+## What Makes Fornex Technically Heavy
+
+1. **Real SPL Token** — $FNRX vault shares visible in Phantom
+2. **Pyth Oracle** — SOL price verified on-chain in Rust
+3. **On-chain NAV Ledger** — Every performance point on Solana
+4. **Helius Indexer** — Real-time webhook-powered feed
+5. **Drift Protocol** — Real perp execution on devnet
+6. **Multi-agent AI** — 3 GPT-4o agents with consensus engine
+7. **pay.sh payments** — Agent earns per trade autonomously
+8. **12 Anchor instructions** — Complex on-chain business logic
+
+## Technical Features
+
+| Feature | Implementation | Depth |
+|---|---|---|
+| Vault Shares | Real SPL Token ($FNRX) | Token Program CPI |
+| Price Feed | Pyth Oracle on-chain | External Program CPI |
+| NAV History | On-chain NavRecord accounts | Custom PDA indexing |
+| Real-time Feed | Helius webhook + SSE | Blockchain indexing |
+| Trade Execution | Drift Protocol SDK | DeFi protocol CPI |
+| AI Agents | Azure GPT-4o × 3 | Multi-agent consensus |
+| Payments | pay.sh streaming | Agentic micropayments |
+| Transparency | On-chain reasoning | Permanent + auditable |
 
 ## Screenshots
 
@@ -41,7 +66,7 @@ Not in a database. On-chain. Forever. Verifiable by anyone.
 ## How It Works
 
 ```
-User deposits SOL -> receives vault shares
+User deposits SOL -> receives real $FNRX SPL vault shares
          |
 Every 15 minutes (autonomous, no human needed):
          |
@@ -74,13 +99,16 @@ NAV updates -> share price changes -> user P&L changes
 
 | Layer | Technology |
 |---|---|
-| Smart Contract | Anchor (Rust) — 7 instructions |
+| Smart Contract | Anchor (Rust) — 12 instructions |
 | Perp Trading | Drift Protocol SDK (devnet) |
 | AI Agents | Azure OpenAI GPT-4o |
 | Agent Loop | TypeScript + pm2 (15-min cycles) |
 | Payments | pay.sh streaming micropayments |
 | Frontend | Next.js + pure CSS |
 | Wallet | Phantom + @solana/wallet-adapter |
+| Shares | SPL Token Program + Associated Token Accounts |
+| Oracle | Pyth Solana Receiver |
+| Indexing | Helius webhook + Server-Sent Events |
 
 ## Architecture
 
@@ -119,10 +147,14 @@ NAV updates -> share price changes -> user P&L changes
 | Instruction | Description |
 |---|---|
 | initialize_vault | Creates vault PDA, sets agent authority |
-| deposit | User sends SOL, receives proportional shares |
-| withdraw | Burns shares, returns proportional SOL |
-| log_multi_agent_decision | Stores all 3 votes on-chain permanently |
+| initialize_vault_with_mint | Creates vault PDA plus $FNRX mint |
+| initialize_vault_mint | One-time live-vault migration for $FNRX |
+| migrate_vault_v2 | Reallocs legacy vault for NAV ledger counter |
+| deposit | User sends SOL, receives proportional $FNRX |
+| withdraw | Burns $FNRX, returns proportional SOL |
+| log_multi_agent_decision | Stores all 3 votes plus Pyth price on-chain permanently |
 | update_nav | Updates vault value after trade settles |
+| record_nav_snapshot | Creates an immutable NavRecord PDA |
 | emergency_pause | Halts agent trading (safety switch) |
 | resume | Restarts agent trading after pause |
 
@@ -165,8 +197,12 @@ The account stores:
 - BEAR vote (direction + leverage + confidence + reasoning)
 - ZEN vote (direction + leverage + confidence + reasoning)
 - Consensus decision
+- Pyth-verified SOL price and confidence
 - Execution status
 - Timestamp
+
+NAV history is also stored as standalone NavRecord PDA accounts, so the
+performance chart can be rebuilt directly from Solana account history.
 
 **This data is permanent. Immutable. Trustless.**
 

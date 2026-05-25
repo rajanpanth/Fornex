@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import {
   Area,
   AreaChart,
@@ -6,14 +6,72 @@ import {
   Tooltip,
   YAxis,
 } from "recharts";
-import { LAMPORTS_PER_SOL } from "@solana/web3.js";
+import { Connection, LAMPORTS_PER_SOL } from "@solana/web3.js";
 import { TrendingUp } from "lucide-react";
-import { VaultData } from "../lib/chain";
+import {
+  decodeNavRecord,
+  PROGRAM_ID,
+  RPC_URL,
+  VAULT_ADDRESS,
+  VaultData,
+} from "../lib/chain";
+
+type ChartPoint = {
+  t: string;
+  nav: number;
+  tradeCount?: number;
+};
+
+const NAV_RECORD_SIZE = 8 + 32 + 8 + 8 + 8 + 8 + 1;
 
 export default function EquityCurve({ vault }: { vault: VaultData | null }) {
   const [range, setRange] = useState<"24h" | "all">("24h");
+  const [history, setHistory] = useState<ChartPoint[]>([]);
+
+  useEffect(() => {
+    let cancelled = false;
+    async function fetchNavHistory() {
+      const connection = new Connection(RPC_URL, "confirmed");
+      const records = await connection.getProgramAccounts(PROGRAM_ID, {
+        filters: [
+          { dataSize: NAV_RECORD_SIZE },
+          { memcmp: { offset: 8, bytes: VAULT_ADDRESS.toBase58() } },
+        ],
+      });
+
+      const decoded = records
+        .map((record) => decodeNavRecord(record.pubkey, record.account.data))
+        .filter((record): record is NonNullable<typeof record> => Boolean(record))
+        .sort((a, b) => Number(a.recordIndex - b.recordIndex))
+        .map((record) => ({
+          t: new Date(record.timestamp * 1000).toLocaleTimeString([], {
+            hour: "2-digit",
+            minute: "2-digit",
+          }),
+          nav: Number(record.nav) / LAMPORTS_PER_SOL,
+          tradeCount: Number(record.tradeCount),
+        }));
+
+      if (!cancelled) setHistory(decoded);
+    }
+
+    fetchNavHistory().catch(() => {
+      if (!cancelled) setHistory([]);
+    });
+    const interval = window.setInterval(
+      () => fetchNavHistory().catch(() => undefined),
+      30_000
+    );
+    return () => {
+      cancelled = true;
+      window.clearInterval(interval);
+    };
+  }, []);
 
   const chartData = useMemo(() => {
+    const visibleHistory = range === "24h" ? history.slice(-24) : history;
+    if (visibleHistory.length > 0) return visibleHistory;
+
     const base = vault ? Number(vault.nav) / LAMPORTS_PER_SOL : 10;
     const points = range === "24h" ? 24 : 36;
     const now = Date.now();
@@ -35,8 +93,9 @@ export default function EquityCurve({ vault }: { vault: VaultData | null }) {
       <div className="equity-header">
         <span className="equity-title">
           <TrendingUp size={16} />
-          VAULT NAV
+          PERFORMANCE HISTORY
         </span>
+        <span className="equity-source">Read directly from Solana</span>
         <div className="equity-toggle">
           <button
             className={`equity-toggle-btn${range === "24h" ? " active" : ""}`}
@@ -52,6 +111,7 @@ export default function EquityCurve({ vault }: { vault: VaultData | null }) {
           </button>
         </div>
       </div>
+      <div className="equity-subtitle">Every data point is an on-chain account</div>
 
       <div className="equity-chart-wrap">
         <ResponsiveContainer width="100%" height="100%">

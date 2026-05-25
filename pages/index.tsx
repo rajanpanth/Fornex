@@ -22,6 +22,7 @@ import {
 import {
   DECISION_ACCOUNT_SIZE,
   Decision,
+  LEGACY_DECISION_ACCOUNT_SIZE,
   PROGRAM_ID,
   RPC_URL,
   decodeDecision,
@@ -159,6 +160,8 @@ function CodeWindow() {
 
 function LiveDecisionPreview() {
   const [liveDecisions, setLiveDecisions] = useState<Decision[]>([]);
+  const [decisionCount, setDecisionCount] = useState(27);
+  const [nextLabel, setNextLabel] = useState("08:42");
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -167,9 +170,15 @@ function LiveDecisionPreview() {
     async function fetchLive() {
       try {
         const connection = new Connection(RPC_URL, "confirmed");
-        const accounts = await connection.getProgramAccounts(PROGRAM_ID, {
-          filters: [{ dataSize: DECISION_ACCOUNT_SIZE }],
-        });
+        const [currentAccounts, legacyAccounts] = await Promise.all([
+          connection.getProgramAccounts(PROGRAM_ID, {
+            filters: [{ dataSize: DECISION_ACCOUNT_SIZE }],
+          }),
+          connection.getProgramAccounts(PROGRAM_ID, {
+            filters: [{ dataSize: LEGACY_DECISION_ACCOUNT_SIZE }],
+          }),
+        ]);
+        const accounts = [...currentAccounts, ...legacyAccounts];
         const decoded = accounts
           .map(({ pubkey, account }) =>
             decodeDecision(pubkey, Buffer.from(account.data))
@@ -178,7 +187,10 @@ function LiveDecisionPreview() {
           .sort((a, b) => b!.timestamp - a!.timestamp)
           .slice(0, 3) as Decision[];
 
-        if (!cancelled) setLiveDecisions(decoded);
+        if (!cancelled) {
+          setLiveDecisions(decoded);
+          setDecisionCount(accounts.length);
+        }
       } catch (error) {
         console.warn("[landing] live decisions fetch failed", error);
       } finally {
@@ -188,21 +200,32 @@ function LiveDecisionPreview() {
 
     void fetchLive();
     const interval = setInterval(() => void fetchLive(), 30_000);
+    const tick = setInterval(() => {
+      const remaining = 900 - (Math.floor(Date.now() / 1000) % 900);
+      setNextLabel(
+        `${Math.floor(remaining / 60).toString().padStart(2, "0")}:${(remaining % 60)
+          .toString()
+          .padStart(2, "0")}`
+      );
+    }, 1000);
     return () => {
       cancelled = true;
       clearInterval(interval);
+      clearInterval(tick);
     };
   }, []);
 
   return (
     <section className="live-decisions-section">
-      <div className="live-decisions-copy reveal">
-        <div className="section-kicker">LIVE ON-CHAIN DECISIONS</div>
-        <h2 className="section-heading">Watch the agents work. Right now. Live.</h2>
+      <div className="live-decisions-copy">
+        <div className="section-kicker">LIVE ON-CHAIN NOW</div>
+        <h2 className="section-heading">No wallet needed. Real decisions.</h2>
         <p className="section-copy">
-          No wallet needed. These are real decisions stored permanently on
-          Solana devnet.
+          Stored permanently on Solana.
         </p>
+        <div className="live-chain-counter">
+          {decisionCount} decisions on-chain | Next in {nextLabel}
+        </div>
       </div>
 
       <div className="live-decision-grid">
@@ -225,6 +248,9 @@ function LiveDecisionPreview() {
                 </div>
                 <div className="live-decision-main">
                   <strong>{direction}</strong>
+                  <span>BULL</span>
+                  <span>BEAR</span>
+                  <span>ZEN</span>
                   <span>{decision.consensus.leverage}x</span>
                   <span>{decision.consensus.confidence}%</span>
                 </div>
@@ -236,7 +262,7 @@ function LiveDecisionPreview() {
         )}
       </div>
 
-      <Link href="/app" className="live-decision-link reveal">
+      <Link href="/app" className="live-decision-link">
         View all decisions <ArrowRight size={17} />
       </Link>
     </section>

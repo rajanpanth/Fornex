@@ -3,6 +3,7 @@ import { useCallback, useEffect, useState } from "react";
 import {
   DECISION_ACCOUNT_SIZE,
   Decision,
+  LEGACY_DECISION_ACCOUNT_SIZE,
   decodeDecision,
   PROGRAM_ID,
 } from "../lib/chain";
@@ -13,13 +14,15 @@ export function useDecisions() {
 
   const refresh = useCallback(async () => {
     try {
-      const accounts = await connection.getProgramAccounts(PROGRAM_ID, {
-        filters: [
-          {
-            dataSize: DECISION_ACCOUNT_SIZE,
-          },
-        ],
-      });
+      const [currentAccounts, legacyAccounts] = await Promise.all([
+        connection.getProgramAccounts(PROGRAM_ID, {
+          filters: [{ dataSize: DECISION_ACCOUNT_SIZE }],
+        }),
+        connection.getProgramAccounts(PROGRAM_ID, {
+          filters: [{ dataSize: LEGACY_DECISION_ACCOUNT_SIZE }],
+        }),
+      ]);
+      const accounts = [...currentAccounts, ...legacyAccounts];
       const parsed = accounts
         .map((a) => decodeDecision(a.pubkey, a.account.data as Buffer))
         .filter(Boolean)

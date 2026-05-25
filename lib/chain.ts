@@ -12,10 +12,18 @@ export const VAULT_ADDRESS = new PublicKey(
     "HMkL7zzAroE919esVY6HSMYzB2ejHM5m4A8JKCSrgBXR"
 );
 
+export const VAULT_MINT_ADDRESS = new PublicKey(
+  process.env.NEXT_PUBLIC_FNRX_MINT_ADDRESS ||
+    "BNBf6ed4h8dZiVd8wpUkcv8BUyFsp75eidkcUhSb94vj"
+);
+
 export const RPC_URL =
   process.env.NEXT_PUBLIC_RPC_URL || "https://api.devnet.solana.com";
 
 export const DECISION_ACCOUNT_SIZE =
+  8 + 32 + 4 + 16 + 4 * 203 + 8 + 1 + 88 + 8 + 8 + 8 + 8 + 1;
+
+export const LEGACY_DECISION_ACCOUNT_SIZE =
   8 + 32 + 4 + 16 + 4 * 203 + 8 + 1 + 88 + 8 + 8 + 1;
 
 /* ── Types ──────────────────────────────────────────────── */
@@ -39,6 +47,17 @@ export type Decision = {
   executed: boolean;
   executionRef: string;
   timestamp: number;
+  solPriceVerified: number;
+  priceConfidence: number;
+};
+
+export type NavRecordData = {
+  pubkey: PublicKey;
+  vault: PublicKey;
+  nav: bigint;
+  timestamp: number;
+  recordIndex: bigint;
+  tradeCount: bigint;
 };
 
 export type Toast = {
@@ -58,6 +77,7 @@ export type VaultData = {
   tradeCount: number;
   winningTrades: number;
   isTradingPaused: boolean;
+  navRecordCount: bigint;
 };
 
 /* ── Binary Reader ──────────────────────────────────────── */
@@ -77,6 +97,7 @@ export class Reader {
   bool() { return this.u8() === 1; }
   u32() { const v = this.data.readUInt32LE(this.offset); this.offset += 4; return v; }
   u64() { const v = this.data.readBigUInt64LE(this.offset); this.offset += 8; return v; }
+  i64() { const v = this.data.readBigInt64LE(this.offset); this.offset += 8; return v; }
 
   fixedString(size: number) {
     const b = this.fixedBytes(size);
@@ -114,7 +135,7 @@ export class Reader {
 export function decodeVault(data: Buffer): VaultData {
   const r = new Reader(data);
   r.skip(8);
-  return {
+  const vault = {
     agentAuthority: r.publicKey(),
     admin: r.publicKey(),
     totalDeposits: r.u64(),
@@ -124,6 +145,29 @@ export function decodeVault(data: Buffer): VaultData {
     winningTrades: r.u32(),
     isTradingPaused: r.bool(),
   };
+  r.i64();
+  r.u8();
+  return {
+    ...vault,
+    navRecordCount: data.length >= 122 ? r.u64() : 0n,
+  };
+}
+
+export function decodeNavRecord(pubkey: PublicKey, data: Buffer): NavRecordData | null {
+  try {
+    const r = new Reader(data);
+    r.skip(8);
+    return {
+      pubkey,
+      vault: r.publicKey(),
+      nav: r.u64(),
+      timestamp: Number(r.i64()),
+      recordIndex: r.u64(),
+      tradeCount: r.u64(),
+    };
+  } catch {
+    return null;
+  }
 }
 
 export function decodeDecision(pubkey: PublicKey, data: Buffer): Decision | null {
@@ -143,6 +187,10 @@ export function decodeDecision(pubkey: PublicKey, data: Buffer): Decision | null
       executed: r.bool(),
       executionRef: r.fixedString(88),
       timestamp: Number(r.skipU64AfterPnl()),
+      solPriceVerified:
+        data.length >= DECISION_ACCOUNT_SIZE ? Number(r.u64()) : 0,
+      priceConfidence:
+        data.length >= DECISION_ACCOUNT_SIZE ? Number(r.u64()) : 0,
     };
   } catch {
     return null;

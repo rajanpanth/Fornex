@@ -10,6 +10,9 @@ import { connection, loadAgentKeypair, PROGRAM_ID, truncateReasoning, VAULT_ADDR
 import type { AgentVote, AgentVotes, ConsensusDecision } from "./types";
 
 const agent = lazyAgent();
+const PYTH_SOL_USD_PRICE_UPDATE_ACCOUNT = new PublicKey(
+  "7UVimffxr9ow1uXYxsr4LHAcV58mLzhmwaeKvJ1pjLiE"
+);
 
 export async function logDecisionOnChain(
   votes: AgentVotes,
@@ -42,6 +45,7 @@ export async function logDecisionOnChain(
       [
         writable(VAULT_ADDRESS),
         writable(decision),
+        readonly(PYTH_SOL_USD_PRICE_UPDATE_ACCOUNT),
         signer(agent().publicKey),
         readonly(SystemProgram.programId),
       ],
@@ -61,6 +65,32 @@ export async function updateNavOnChain(newNavLamports: number): Promise<string |
   });
 }
 
+export async function recordNavSnapshot(): Promise<string | null> {
+  return retry("recordNavSnapshot", async () => {
+    const vault = await fetchVault();
+    const [navRecord] = PublicKey.findProgramAddressSync(
+      [
+        Buffer.from("nav_record"),
+        VAULT_ADDRESS.toBuffer(),
+        u64(vault.navRecordCount),
+      ],
+      PROGRAM_ID
+    );
+
+    const data = discriminator("global", "record_nav_snapshot");
+    return sendIx(
+      data,
+      [
+        writable(VAULT_ADDRESS),
+        writable(navRecord),
+        signer(agent().publicKey),
+        readonly(SystemProgram.programId),
+      ],
+      "record nav snapshot"
+    );
+  });
+}
+
 export async function fetchVault(): Promise<{
   agentAuthority: PublicKey;
   admin: PublicKey;
@@ -70,12 +100,13 @@ export async function fetchVault(): Promise<{
   tradeCount: number;
   winningTrades: number;
   isTradingPaused: boolean;
+  navRecordCount: BN;
 }> {
   const accountInfo = await connection.getAccountInfo(VAULT_ADDRESS);
   if (!accountInfo) throw new Error(`Vault not found: ${VAULT_ADDRESS.toBase58()}`);
   const reader = new Reader(accountInfo.data);
   reader.skip(8);
-  return {
+  const decoded = {
     agentAuthority: reader.publicKey(),
     admin: reader.publicKey(),
     totalDeposits: reader.u64(),
@@ -85,6 +116,9 @@ export async function fetchVault(): Promise<{
     winningTrades: reader.u32(),
     isTradingPaused: reader.bool(),
   };
+  reader.i64();
+  reader.u8();
+  return { ...decoded, navRecordCount: reader.u64() };
 }
 
 async function retry<T>(label: string, fn: () => Promise<T>): Promise<T | null> {
@@ -198,5 +232,7 @@ class Reader {
     this.offset += 8;
     return value;
   }
+  i64(): BN {
+    return this.u64();
+  }
 }
-

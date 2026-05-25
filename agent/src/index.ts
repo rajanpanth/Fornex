@@ -8,7 +8,7 @@ import {
   openPosition,
   shutdownExecutor,
 } from "./executor";
-import { fetchVault, logDecisionOnChain, updateNavOnChain } from "./logger";
+import { fetchVault, logDecisionOnChain, recordNavSnapshot, updateNavOnChain } from "./logger";
 import { payAgentForTrade } from "./paysh";
 import { fetchSignals } from "./signals";
 import type { AgentVotes, ConsensusDecision, CurrentPosition, MarketSignals } from "./types";
@@ -87,6 +87,9 @@ async function runCycle(): Promise<void> {
     const navSig = await safeStep("update NAV on-chain", () =>
       updateNavOnChain(safeNavLamports)
     , 60_000);
+    const navRecordSig = navSig
+      ? await safeStep("record NAV snapshot", recordNavSnapshot, 60_000)
+      : null;
 
     printCycle({
       signals,
@@ -96,6 +99,7 @@ async function runCycle(): Promise<void> {
       paymentSig,
       logSig,
       navSig,
+      navRecordSig,
       cycleStartedAt,
       cycleNumber,
       oldNavLamports,
@@ -155,6 +159,7 @@ function printCycle({
   paymentSig,
   logSig,
   navSig,
+  navRecordSig,
   cycleStartedAt,
   cycleNumber,
   oldNavLamports,
@@ -167,6 +172,7 @@ function printCycle({
   paymentSig: string | null;
   logSig: string | null;
   navSig: string | null;
+  navRecordSig: string | null;
   cycleStartedAt: Date;
   cycleNumber: number;
   oldNavLamports: number;
@@ -174,42 +180,59 @@ function printCycle({
   position: CurrentPosition | null;
 }) {
   const navSol = newNavLamports / LAMPORTS_PER_SOL;
-  const navChange =
-    oldNavLamports > 0
-      ? ((newNavLamports - oldNavLamports) / oldNavLamports) * 100
-      : 0;
 
-  console.log(`\n╔${BORDER}╗`);
-  console.log(line("     FORNEX AUTONOMOUS AGENT v1.0"));
-  console.log(line("     Solana Devnet | Drift Protocol"));
-  console.log(`╠${BORDER}╣`);
-  console.log(line(` 🕐  ${time(cycleStartedAt)}  |  Cycle #${cycleNumber}`));
-  console.log(
-    line(
-      ` 📊  SOL: $${signals.currentPrice.toFixed(2)}  |  Funding: ${signals.fundingRate.toFixed(4)}%/hr`
-    )
-  );
-  console.log(`╠${BORDER}╣`);
-  console.log(voteLine("🐂", "BULL", votes.bull));
-  console.log(reasonLine(votes.bull.reasoning));
-  console.log(voteLine("🐻", "BEAR", votes.bear));
-  console.log(reasonLine(votes.bear.reasoning));
-  console.log(voteLine("⚖️", "ZEN", votes.zen));
-  console.log(reasonLine(votes.zen.reasoning));
-  console.log(`╠${BORDER}╣`);
-  console.log(
-    line(
-      ` ✅  CONSENSUS: ${consensus.direction} ${consensus.leverage}x | conf: ${consensus.confidence}%`
-    )
-  );
-  console.log(line(executionSig ? " 🔄  Drift execution confirmed" : " 🔄  No Drift execution this cycle"));
-  console.log(line(` 📝  Logged: ${shortSig(logSig)}`));
-  console.log(line(` 💸  pay.sh: ${paymentSig ? "0.001 SOL earned" : "no payment this cycle"}`));
-  console.log(
-    line(` 📈  Vault NAV: ${navSol.toFixed(2)} SOL (${signed(navChange)}%)`)
-  );
-  if (navSig) console.log(line(` 🧾  NAV tx: ${shortSig(navSig)}`));
-  console.log(`╚${BORDER}╝\n`);
+  printCycleHeader(cycleNumber, time(cycleStartedAt));
+  printSignals(signals);
+  printVotes(votes);
+  printResult(consensus, executionSig || logSig, navSol);
+  if (navSig) console.log(`[agent] NAV tx: ${shortSig(navSig)}`);
+  if (navRecordSig) console.log(`[agent] NAV record: ${shortSig(navRecordSig)}`);
+}
+
+function printCycleHeader(cycleNumber: number, timeLabel: string) {
+  console.log("\n╔════════════════════════════════════════════╗");
+  console.log("║     FORNEX AUTONOMOUS AGENT v1.0          ║");
+  console.log("║     Solana Devnet  |  Drift Protocol      ║");
+  console.log("╠════════════════════════════════════════════╣");
+  console.log(`║  🕐  ${timeLabel}  |  Cycle #${cycleNumber.toString().padStart(4, "0")}       ║`);
+  console.log("╚════════════════════════════════════════════╝");
+}
+
+function printSignals(signals: MarketSignals) {
+  console.log("┌─── MARKET SIGNALS ─────────────────────────┐");
+  console.log(`│  💰 SOL Price:    $${signals.currentPrice.toFixed(4).padStart(10)}`);
+  console.log(`│  📊 Funding:      ${signals.fundingRate.toFixed(4)}%/hr`);
+  console.log(`│  📈 OI Change:    ${signals.oiChange.toFixed(2)}%`);
+  console.log(`│  ⚖️  L/S Ratio:    ${signals.lsRatio.toFixed(3)}`);
+  console.log(`│  🎯 Liq Wall:     $${signals.liqWallPrice.toFixed(2)}`);
+  console.log("└────────────────────────────────────────────┘");
+}
+
+function printVotes(votes: AgentVotes) {
+  console.log("┌─── AGENT VOTES ─────────────────────────────┐");
+  console.log(`│  🐂 BULL → ${votes.bull.direction.padEnd(6)} ${votes.bull.leverage}x  (${votes.bull.confidence}%)`);
+  console.log(`│     "${votes.bull.reasoning.slice(0, 40)}"`);
+  console.log(`│  🐻 BEAR → ${votes.bear.direction.padEnd(6)} ${votes.bear.leverage}x  (${votes.bear.confidence}%)`);
+  console.log(`│     "${votes.bear.reasoning.slice(0, 40)}"`);
+  console.log(`│  ⚖️  ZEN  → ${votes.zen.direction.padEnd(6)} ${votes.zen.leverage}x  (${votes.zen.confidence}%)`);
+  console.log(`│     "${votes.zen.reasoning.slice(0, 40)}"`);
+  console.log("└─────────────────────────────────────────────┘");
+}
+
+function printResult(
+  consensus: ConsensusDecision,
+  txSig: string | null,
+  navSOL: number
+) {
+  const executed = consensus.shouldExecute && txSig;
+  console.log("┌─── RESULT ──────────────────────────────────┐");
+  console.log(`│  ${executed ? "✅" : "⏭️ "} CONSENSUS: ${consensus.direction} ${consensus.leverage}x | ${consensus.confidence}% conf`);
+  if (txSig) {
+    console.log(`│  📝 On-chain: ${txSig.slice(0, 20)}...`);
+  }
+  console.log("│  💸 pay.sh:   +0.001 SOL earned");
+  console.log(`│  📈 Vault NAV: ${navSOL.toFixed(4)} SOL`);
+  console.log("└─────────────────────────────────────────────┘\n");
 }
 
 function printPausedCycle(cycleStartedAt: Date, cycleNumber: number) {

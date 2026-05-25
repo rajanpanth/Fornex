@@ -4,18 +4,27 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import { useConnection, useWallet } from "@solana/wallet-adapter-react";
 import { WalletMultiButton } from "@solana/wallet-adapter-react-ui";
 import {
+  ComputeBudgetProgram,
+  Connection,
   LAMPORTS_PER_SOL,
   PublicKey,
   SystemProgram,
+  SYSVAR_RENT_PUBKEY,
   Transaction,
   TransactionInstruction,
 } from "@solana/web3.js";
+import {
+  ASSOCIATED_TOKEN_PROGRAM_ID,
+  getAssociatedTokenAddress,
+  TOKEN_PROGRAM_ID,
+} from "@solana/spl-token";
 import { Buffer } from "buffer";
 import { BarChart3, BrainCircuit, Landmark, Repeat2 } from "lucide-react";
 
 import {
   PROGRAM_ID,
   VAULT_ADDRESS,
+  VAULT_MINT_ADDRESS,
   discriminator,
   u64,
   readonly,
@@ -34,6 +43,7 @@ import DebateFeed from "../components/DebateFeed";
 import EquityCurve from "../components/EquityCurve";
 import AgentPerformanceChart from "../components/AgentPerformanceChart";
 import AgentEarnings from "../components/AgentEarnings";
+import StrategyOrdersPanel from "../components/StrategyOrdersPanel";
 import ToastContainer, { useToasts } from "../components/Toast";
 
 export default function AppDashboard() {
@@ -43,6 +53,11 @@ export default function AppDashboard() {
   const [loading, setLoading] = useState(false);
   const [solPrice, setSolPrice] = useState({ price: 0, change: 0 });
   const [priceFlash, setPriceFlash] = useState<"up" | "down" | null>(null);
+  const [fnrxBalance, setFnrxBalance] = useState<number | null>(null);
+  const [newDecisionAlert, setNewDecisionAlert] = useState(false);
+  const [priorityFee, setPriorityFee] = useState<"DYNAMIC" | "FAST" | "TURBO">("DYNAMIC");
+  const [pythStatus, setPythStatus] = useState<"UP" | "DOWN">("UP");
+  const [rpcStatus, setRpcStatus] = useState<"UP" | "DOWN">("UP");
   const [mobileTab, setMobileTab] = useState<"vault" | "feed" | "trade" | "stats">("vault");
 
   useEffect(() => { setMounted(true); }, []);
@@ -53,6 +68,67 @@ export default function AppDashboard() {
   const { userDeposit, userSharesSol, userPnlPct } = usePosition(vault);
   const { toasts, addToast, removeToast } = useToasts();
   const cycle = useAgentCycle(refreshDecisions);
+
+  useEffect(() => {
+    const eventSource = new EventSource("/api/events");
+    eventSource.onmessage = (event) => {
+      const newDecisions = JSON.parse(event.data);
+      if (Array.isArray(newDecisions) && newDecisions.length > 0) {
+        refreshDecisions();
+        setNewDecisionAlert(true);
+        window.setTimeout(() => setNewDecisionAlert(false), 3000);
+      }
+    };
+    const poll = window.setInterval(refreshDecisions, 30_000);
+    return () => {
+      eventSource.close();
+      window.clearInterval(poll);
+    };
+  }, [refreshDecisions]);
+
+  useEffect(() => {
+    async function checkStatuses() {
+      try {
+        const [pyth, rpc] = await Promise.all([
+          fetch(
+            "https://hermes.pyth.network/api/latest_price_feeds?ids[]=0xef0d8b6fda2ceba41da15d4095d1da392a0d2f8ed0c6c7bc0f4cfac8c280b56d"
+          ),
+          connection.getLatestBlockhash(),
+        ]);
+        setPythStatus(pyth.ok ? "UP" : "DOWN");
+        setRpcStatus(rpc.blockhash ? "UP" : "DOWN");
+      } catch {
+        setPythStatus("DOWN");
+        setRpcStatus("DOWN");
+      }
+    }
+    void checkStatuses();
+    const id = window.setInterval(checkStatuses, 30_000);
+    return () => window.clearInterval(id);
+  }, [connection]);
+
+  const refreshFnrxBalance = useCallback(async () => {
+    if (!wallet.publicKey) {
+      setFnrxBalance(null);
+      return;
+    }
+    try {
+      const ata = await getAssociatedTokenAddress(
+        VAULT_MINT_ADDRESS,
+        wallet.publicKey
+      );
+      const balance = await connection.getTokenAccountBalance(ata);
+      setFnrxBalance(balance.value.uiAmount ?? 0);
+    } catch {
+      setFnrxBalance(0);
+    }
+  }, [connection, wallet.publicKey]);
+
+  useEffect(() => {
+    void refreshFnrxBalance();
+    const id = setInterval(() => void refreshFnrxBalance(), 30_000);
+    return () => clearInterval(id);
+  }, [refreshFnrxBalance]);
 
   // SOL price fetch
   useEffect(() => {
@@ -97,21 +173,51 @@ export default function AppDashboard() {
           ],
           PROGRAM_ID
         );
+        const userTokenAccount = await getAssociatedTokenAddress(
+          VAULT_MINT_ADDRESS,
+          wallet.publicKey
+        );
         const data = Buffer.concat([
           await discriminator("global", kind),
           u64(units),
         ]);
+        const keys =
+          kind === "deposit"
+            ? [
+                writable(VAULT_ADDRESS),
+                writable(VAULT_MINT_ADDRESS),
+                writable(userTokenAccount),
+                writable(userDepositPda),
+                signer(wallet.publicKey),
+                readonly(TOKEN_PROGRAM_ID),
+                readonly(ASSOCIATED_TOKEN_PROGRAM_ID),
+                readonly(SystemProgram.programId),
+                readonly(SYSVAR_RENT_PUBKEY),
+              ]
+            : [
+                writable(VAULT_ADDRESS),
+                writable(VAULT_MINT_ADDRESS),
+                writable(userTokenAccount),
+                writable(userDepositPda),
+                signer(wallet.publicKey),
+                readonly(TOKEN_PROGRAM_ID),
+                readonly(SystemProgram.programId),
+              ];
         const ix = new TransactionInstruction({
           programId: PROGRAM_ID,
-          keys: [
-            writable(VAULT_ADDRESS),
-            writable(userDepositPda),
-            signer(wallet.publicKey),
-            readonly(SystemProgram.programId),
-          ],
+          keys,
           data,
         });
-        const tx = new Transaction().add(ix);
+        const tx = new Transaction();
+        const feeMicroLamports = await resolvePriorityFee(priorityFee, connection);
+        if (feeMicroLamports > 0) {
+          tx.add(
+            ComputeBudgetProgram.setComputeUnitPrice({
+              microLamports: feeMicroLamports,
+            })
+          );
+        }
+        tx.add(ix);
         tx.feePayer = wallet.publicKey;
         tx.recentBlockhash = (
           await connection.getLatestBlockhash()
@@ -126,13 +232,14 @@ export default function AppDashboard() {
           sig
         );
         await refresh();
+        await refreshFnrxBalance();
       } catch (err: any) {
         addToast("error", "Transaction failed", err?.message || String(err));
       } finally {
         setLoading(false);
       }
     },
-    [wallet, connection, addToast, refresh]
+    [wallet, connection, addToast, refresh, refreshFnrxBalance, priorityFee]
   );
 
   return (
@@ -181,9 +288,33 @@ export default function AppDashboard() {
               Next decision in {cycle.label}
             </div>
             <div className="risk-indicator">RISK: NORMAL</div>
+            {newDecisionAlert && (
+              <div className="new-decision-badge">NEW DECISION</div>
+            )}
           </div>
 
           <div className="app-topbar-right">
+            <div className="priority-fee">
+              <span className="label">Priority Fee:</span>
+              <select
+                value={priorityFee}
+                onChange={(event) =>
+                  setPriorityFee(event.target.value as typeof priorityFee)
+                }
+              >
+                <option value="DYNAMIC">DYNAMIC</option>
+                <option value="FAST">FAST</option>
+                <option value="TURBO">TURBO</option>
+              </select>
+            </div>
+            <div className="pyth-status">
+              <span className={pythStatus === "UP" ? "green" : "red"}>●</span>
+              Pyth {pythStatus}
+            </div>
+            <div className="pyth-status">
+              <span className={rpcStatus === "UP" ? "green" : "red"}>●</span>
+              Solana Devnet
+            </div>
             <span className="badge-devnet">DEVNET</span>
             {mounted && <WalletMultiButton />}
           </div>
@@ -212,6 +343,7 @@ export default function AppDashboard() {
                 userSharesSol={userSharesSol}
                 userPnlPct={userPnlPct}
                 userDeposit={userDeposit}
+                fnrxBalance={fnrxBalance}
               />
             </div>
           </div>
@@ -224,6 +356,7 @@ export default function AppDashboard() {
           {/* RIGHT COLUMN */}
           <div className={`app-col-right mobile-panel mobile-stats ${mobileTab === "stats" ? "active" : ""}`}>
             <EquityCurve vault={vault} />
+            <StrategyOrdersPanel decision={decisions[0] ?? null} />
             <AgentPerformanceChart decisions={decisions} />
             <AgentEarnings trades={trades} winRate={winRate} cycle={cycle} />
           </div>
@@ -265,6 +398,20 @@ export default function AppDashboard() {
       <ToastContainer toasts={toasts} onRemove={removeToast} />
     </>
   );
+}
+
+async function resolvePriorityFee(
+  mode: "DYNAMIC" | "FAST" | "TURBO",
+  connection: Connection
+): Promise<number> {
+  if (mode === "FAST") return 10_000;
+  if (mode === "TURBO") return 100_000;
+  try {
+    const fees = await connection.getRecentPrioritizationFees();
+    return Math.max(...fees.map((fee) => fee.prioritizationFee), 0);
+  } catch {
+    return 0;
+  }
 }
 
 function parseDecimalUnits(value: string, decimals: number): bigint {

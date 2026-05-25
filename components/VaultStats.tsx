@@ -10,6 +10,7 @@ export default function VaultStats({
   userSharesSol,
   userPnlPct,
   userDeposit,
+  fnrxBalance,
 }: {
   vault: VaultData | null;
   nav: number;
@@ -18,6 +19,7 @@ export default function VaultStats({
   userSharesSol: number;
   userPnlPct: number | null;
   userDeposit: { shares: bigint; totalDeposited: bigint } | null;
+  fnrxBalance: number | null;
 }) {
   const pnlSol =
     userDeposit && userPnlPct !== null
@@ -67,14 +69,14 @@ export default function VaultStats({
 
         <div className="vault-stat-box">
           <Wallet size={17} className="vault-stat-icon" />
-          <div className="vault-stat-label">Your Shares</div>
+          <div className="vault-stat-label" title="$FNRX is your vault share token. Hold it in Phantom. Redeem anytime for SOL.">
+            $FNRX Balance
+          </div>
           <div className="vault-stat-value">
-            {userDeposit
-              ? (Number(userDeposit.shares) / LAMPORTS_PER_SOL).toFixed(4)
-              : "—"}
+            {fnrxBalance !== null ? `${fnrxBalance.toFixed(4)} FNRX` : "—"}
           </div>
           <div className="vault-stat-sub neutral">
-            {userDeposit ? `≈ ${userSharesSol.toFixed(3)} SOL` : "No deposit"}
+            {fnrxBalance !== null ? `≈ ${userSharesSol.toFixed(3)} SOL current value` : "Connect wallet"}
           </div>
         </div>
 
