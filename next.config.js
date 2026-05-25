@@ -1,7 +1,10 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
   reactStrictMode: true,
-  transpilePackages: ['@ledgerhq/errors'],
+  transpilePackages: ['@ledgerhq/errors', '@ledgerhq/devices', '@ledgerhq/hw-transport'],
+  experimental: {
+    esmExternals: false,
+  },
   webpack: (config) => {
     config.module.rules.push({
       test: /\.m?js/,
