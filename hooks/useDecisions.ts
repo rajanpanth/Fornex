@@ -23,13 +23,16 @@ export function useDecisions() {
         }),
       ]);
       const accounts = [...currentAccounts, ...legacyAccounts];
+      console.log('[fornex] raw accounts:', accounts.length);
       const parsed = accounts
         .map((a) => decodeDecision(a.pubkey, a.account.data as Buffer))
         .filter(Boolean)
         .sort((a, b) => b!.decisionIndex - a!.decisionIndex)
         .slice(0, 12) as Decision[];
+      console.log('[fornex] parsed decisions:', parsed.length);
       setDecisions(parsed);
-    } catch {
+    } catch (e) {
+      console.error('[fornex] useDecisions fetch failed:', e);
       /* silent */
     }
   }, [connection]);

@@ -85,7 +85,11 @@ export type VaultData = {
 /* ── Binary Reader ──────────────────────────────────────── */
 export class Reader {
   private offset = 0;
-  constructor(private data: Buffer) {}
+  constructor(data: Buffer | Uint8Array) {
+    // web3.js may return Uint8Array in browser context; ensure Buffer methods exist
+    this.data = Buffer.from(data) as Buffer;
+  }
+  private data: Buffer;
 
   skip(n: number) { this.offset += n; }
 
@@ -194,7 +198,8 @@ export function decodeDecision(pubkey: PublicKey, data: Buffer): Decision | null
       priceConfidence:
         data.length >= DECISION_ACCOUNT_SIZE ? Number(r.u64()) : 0,
     };
-  } catch {
+  } catch (e) {
+    console.error('[fornex] decodeDecision failed:', e);
     return null;
   }
 }
