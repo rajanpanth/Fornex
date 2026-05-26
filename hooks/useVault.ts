@@ -1,22 +1,22 @@
-import { useConnection } from "@solana/wallet-adapter-react";
-import { LAMPORTS_PER_SOL } from "@solana/web3.js";
+import { Connection, LAMPORTS_PER_SOL } from "@solana/web3.js";
 import { useCallback, useEffect, useState } from "react";
-import { decodeVault, VAULT_ADDRESS, VaultData } from "../lib/chain";
+import { decodeVault, RPC_URL, VAULT_ADDRESS, VaultData } from "../lib/chain";
 
 export function useVault() {
-  const { connection } = useConnection();
   const [vault, setVault] = useState<VaultData | null>(null);
 
   const refresh = useCallback(async () => {
     try {
+      const connection = new Connection(RPC_URL, "confirmed");
       const info = await connection.getAccountInfo(VAULT_ADDRESS);
       if (info) {
         setVault(decodeVault(info.data as Buffer));
       }
-    } catch {
+    } catch (e) {
+      console.error('[fornex] useVault fetch failed:', e);
       /* silent */
     }
-  }, [connection]);
+  }, []);
 
   // Primary poll – fires immediately on mount
   useEffect(() => {

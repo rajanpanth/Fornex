@@ -1,19 +1,20 @@
-import { useConnection } from "@solana/wallet-adapter-react";
+import { Connection } from "@solana/web3.js";
 import { useCallback, useEffect, useState } from "react";
 import {
   DECISION_ACCOUNT_SIZE,
   Decision,
   LEGACY_DECISION_ACCOUNT_SIZE,
+  RPC_URL,
   decodeDecision,
   PROGRAM_ID,
 } from "../lib/chain";
 
 export function useDecisions() {
-  const { connection } = useConnection();
   const [decisions, setDecisions] = useState<Decision[]>([]);
 
   const refresh = useCallback(async () => {
     try {
+      const connection = new Connection(RPC_URL, "confirmed");
       // Run sequentially to avoid concurrent getProgramAccounts 429s on public devnet
       const currentAccounts = await connection.getProgramAccounts(PROGRAM_ID, {
         filters: [{ dataSize: DECISION_ACCOUNT_SIZE }],
@@ -34,7 +35,7 @@ export function useDecisions() {
       console.error('[fornex] useDecisions fetch failed:', e);
       /* silent */
     }
-  }, [connection]);
+  }, []);
 
   // Primary poll – fires immediately on mount
   useEffect(() => {
