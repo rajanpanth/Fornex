@@ -1,36 +1,172 @@
 import type { NextApiRequest, NextApiResponse } from "next";
-import { Connection } from "@solana/web3.js";
-import {
-  DECISION_ACCOUNT_SIZE,
-  LEGACY_DECISION_ACCOUNT_SIZE,
-  PROGRAM_ID,
-  RPC_URL,
-  decodeDecision,
-} from "../../lib/chain";
+
+const PROGRAM_ID =
+  process.env.NEXT_PUBLIC_VAULT_PROGRAM_ID ||
+  "H6vbfTp6XwfFSHWtpzjZuyrx6bpnp8Rwt6bVZAUT6vZf";
+
+const RPC_URL =
+  process.env.NEXT_PUBLIC_HELIUS_RPC_URL ||
+  process.env.NEXT_PUBLIC_RPC_URL ||
+  "https://api.devnet.solana.com";
+
+const DECISION_ACCOUNT_SIZE = 1002;
+const LEGACY_DECISION_ACCOUNT_SIZE = 986;
+
+type Vote = {
+  direction: number;
+  leverage: number;
+  confidence: number;
+  reasoning: string;
+  reasoningBytes: number[];
+};
+
+type RpcAccount = {
+  pubkey: string;
+  account: {
+    data: [string, string];
+  };
+};
+
+class Reader {
+  private offset = 0;
+  constructor(private readonly data: Buffer) {}
+
+  skip(size: number) {
+    this.offset += size;
+  }
+
+  u8() {
+    const value = this.data.readUInt8(this.offset);
+    this.offset += 1;
+    return value;
+  }
+
+  bool() {
+    return this.u8() === 1;
+  }
+
+  u32() {
+    const value = this.data.readUInt32LE(this.offset);
+    this.offset += 4;
+    return value;
+  }
+
+  u64() {
+    const value = this.data.readBigUInt64LE(this.offset);
+    this.offset += 8;
+    return Number(value);
+  }
+
+  fixedBytes(size: number) {
+    const bytes = this.data.subarray(this.offset, this.offset + size);
+    this.offset += size;
+    return bytes;
+  }
+
+  fixedString(size: number) {
+    const bytes = this.fixedBytes(size);
+    const end = bytes.indexOf(0);
+    return bytes.subarray(0, end === -1 ? size : end).toString("utf8");
+  }
+
+  vote(): Vote {
+    const direction = this.u8();
+    const leverage = this.u8();
+    const confidence = this.u8();
+    const reasoningBytes = this.fixedBytes(200);
+    const end = reasoningBytes.indexOf(0);
+    return {
+      direction,
+      leverage,
+      confidence,
+      reasoning: reasoningBytes
+        .subarray(0, end === -1 ? reasoningBytes.length : end)
+        .toString("utf8"),
+      reasoningBytes: Array.from(reasoningBytes),
+    };
+  }
+}
+
+async function getProgramAccounts(dataSize: number): Promise<RpcAccount[]> {
+  const response = await fetch(RPC_URL, {
+    method: "POST",
+    headers: { "content-type": "application/json" },
+    body: JSON.stringify({
+      jsonrpc: "2.0",
+      id: dataSize,
+      method: "getProgramAccounts",
+      params: [
+        PROGRAM_ID,
+        {
+          encoding: "base64",
+          filters: [{ dataSize }],
+        },
+      ],
+    }),
+  });
+
+  const payload = await response.json();
+  if (!response.ok || payload.error) {
+    throw new Error(
+      payload.error?.message || `RPC request failed with ${response.status}`
+    );
+  }
+  return payload.result || [];
+}
+
+function decodeDecision(account: RpcAccount) {
+  const data = Buffer.from(account.account.data[0], "base64");
+  const reader = new Reader(data);
+  reader.skip(8); // Anchor discriminator
+  reader.skip(32); // vault pubkey
+
+  const decisionIndex = reader.u32();
+  const market = reader.fixedString(16);
+  const bullVote = reader.vote();
+  const bearVote = reader.vote();
+  const zenVote = reader.vote();
+  const consensus = reader.vote();
+  const sizeUsd = reader.u64();
+  const executed = reader.bool();
+  const executionRef = reader.fixedString(88);
+  reader.skip(8); // pnl_lamports
+  const timestamp = reader.u64();
+  const solPriceVerified = data.length >= DECISION_ACCOUNT_SIZE ? reader.u64() : 0;
+  const priceConfidence = data.length >= DECISION_ACCOUNT_SIZE ? reader.u64() : 0;
+
+  return {
+    pubkey: account.pubkey,
+    decisionIndex,
+    market,
+    bullVote,
+    bearVote,
+    zenVote,
+    consensus,
+    sizeUsd,
+    executed,
+    executionRef,
+    timestamp,
+    solPriceVerified,
+    priceConfidence,
+  };
+}
 
 export default async function handler(
   _req: NextApiRequest,
   res: NextApiResponse
 ) {
   try {
-    const connection = new Connection(RPC_URL, "confirmed");
-    const currentAccounts = await connection.getProgramAccounts(PROGRAM_ID, {
-      filters: [{ dataSize: DECISION_ACCOUNT_SIZE }],
-    });
-    const legacyAccounts = await connection.getProgramAccounts(PROGRAM_ID, {
-      filters: [{ dataSize: LEGACY_DECISION_ACCOUNT_SIZE }],
-    });
+    const [currentAccounts, legacyAccounts] = await Promise.all([
+      getProgramAccounts(DECISION_ACCOUNT_SIZE),
+      getProgramAccounts(LEGACY_DECISION_ACCOUNT_SIZE),
+    ]);
 
     const decisions = [...currentAccounts, ...legacyAccounts]
-      .map((account) => decodeDecision(account.pubkey, account.account.data))
-      .filter(Boolean)
-      .sort((a, b) => b!.decisionIndex - a!.decisionIndex)
-      .slice(0, 12)
-      .map((decision) => ({
-        ...decision!,
-        pubkey: decision!.pubkey.toBase58(),
-      }));
+      .map(decodeDecision)
+      .sort((a, b) => b.decisionIndex - a.decisionIndex)
+      .slice(0, 12);
 
+    res.setHeader("cache-control", "no-store");
     res.status(200).json({ decisions });
   } catch (error: any) {
     console.error("[fornex] /api/decisions failed:", error);
