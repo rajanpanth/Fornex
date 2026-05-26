@@ -2,8 +2,6 @@ import Head from "next/head";
 import Link from "next/link";
 import { useEffect, useRef, useState } from "react";
 import { motion, useMotionValue, useSpring, useTransform } from "framer-motion";
-import { Connection } from "@solana/web3.js";
-import { Buffer } from "buffer";
 import {
   ArrowRight,
   Bot,
@@ -19,16 +17,7 @@ import {
   Sparkles,
   WalletCards,
 } from "lucide-react";
-import {
-  DECISION_ACCOUNT_SIZE,
-  Decision,
-  LEGACY_DECISION_ACCOUNT_SIZE,
-  PROGRAM_ID,
-  RPC_URL,
-  decodeDecision,
-  dirLabel,
-  formatTimeAgo,
-} from "../lib/chain";
+import LiveDecisionPreview from "../components/LiveDecisionPreview";
 
 const stats = [
   ["3", "Specialized agents"],
@@ -155,120 +144,6 @@ function CodeWindow() {
         <p className="terminal-consensus">CONSENSUS: LONG · 72% · TX READY</p>
       </div>
     </motion.div>
-  );
-}
-
-function LiveDecisionPreview() {
-  const [liveDecisions, setLiveDecisions] = useState<Decision[]>([]);
-  const [decisionCount, setDecisionCount] = useState<number | null>(null);
-  const [nextLabel, setNextLabel] = useState("08:42");
-  const [loading, setLoading] = useState(true);
-
-  useEffect(() => {
-    let cancelled = false;
-
-    async function fetchLive() {
-      try {
-        const connection = new Connection(RPC_URL, "confirmed");
-        const [currentAccounts, legacyAccounts] = await Promise.all([
-          connection.getProgramAccounts(PROGRAM_ID, {
-            filters: [{ dataSize: DECISION_ACCOUNT_SIZE }],
-          }),
-          connection.getProgramAccounts(PROGRAM_ID, {
-            filters: [{ dataSize: LEGACY_DECISION_ACCOUNT_SIZE }],
-          }),
-        ]);
-        const accounts = [...currentAccounts, ...legacyAccounts];
-        const decoded = accounts
-          .map(({ pubkey, account }) =>
-            decodeDecision(pubkey, Buffer.from(account.data))
-          )
-          .filter(Boolean)
-          .sort((a, b) => b!.timestamp - a!.timestamp)
-          .slice(0, 3) as Decision[];
-
-        if (!cancelled) {
-          setLiveDecisions(decoded);
-          setDecisionCount(accounts.length);
-        }
-      } catch (error) {
-        console.warn("[landing] live decisions fetch failed", error);
-      } finally {
-        if (!cancelled) setLoading(false);
-      }
-    }
-
-    void fetchLive();
-    const interval = setInterval(() => void fetchLive(), 30_000);
-    const tick = setInterval(() => {
-      const remaining = 900 - (Math.floor(Date.now() / 1000) % 900);
-      setNextLabel(
-        `${Math.floor(remaining / 60).toString().padStart(2, "0")}:${(remaining % 60)
-          .toString()
-          .padStart(2, "0")}`
-      );
-    }, 1000);
-    return () => {
-      cancelled = true;
-      clearInterval(interval);
-      clearInterval(tick);
-    };
-  }, []);
-
-  return (
-    <section className="live-decisions-section">
-      <div className="live-decisions-copy">
-        <div className="section-kicker">LIVE ON-CHAIN NOW</div>
-        <h2 className="section-heading">No wallet needed. Real decisions.</h2>
-        <p className="section-copy">
-          Stored permanently on Solana.
-        </p>
-        <div className="live-chain-counter">
-          {decisionCount === null
-            ? "Loading on-chain decisions…"
-            : `${decisionCount} decisions on-chain`}{" "}
-          {decisionCount !== null && `| Next in ${nextLabel}`}
-        </div>
-      </div>
-
-      <div className="live-decision-grid">
-        {loading && liveDecisions.length === 0 ? (
-          <div className="live-decision-empty reveal">Reading Solana devnet...</div>
-        ) : liveDecisions.length === 0 ? (
-          <div className="live-decision-empty reveal">Waiting for on-chain decisions.</div>
-        ) : (
-          liveDecisions.map((decision) => {
-            const direction = dirLabel(decision.consensus.direction);
-            return (
-              <Link
-                href="/app"
-                className={`live-decision-card reveal ${direction.toLowerCase()}`}
-                key={decision.pubkey.toBase58()}
-              >
-                <div className="live-decision-top">
-                  <span>{decision.market || "SOL-PERP"}</span>
-                  <b>{formatTimeAgo(decision.timestamp)}</b>
-                </div>
-                <div className="live-decision-main">
-                  <strong>{direction}</strong>
-                  <span>BULL {dirLabel(decision.bullVote.direction)}</span>
-                  <span>BEAR {dirLabel(decision.bearVote.direction)}</span>
-                  <span>ZEN {dirLabel(decision.zenVote.direction)}</span>
-                  <span>{decision.consensus.leverage}x</span>
-                  <span>{decision.consensus.confidence}%</span>
-                </div>
-                <p>{decision.consensus.reasoning || "Consensus logged on-chain."}</p>
-                <code>{decision.pubkey.toBase58()}</code>
-              </Link>
-            );
-          })
-        )}
-      </div>
-
-      <Link href="/app" className="live-decision-link">
-        View all decisions <ArrowRight size={17} />
-      </Link>
-    </section>
   );
 }
 

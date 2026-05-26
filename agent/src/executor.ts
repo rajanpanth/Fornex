@@ -3,6 +3,25 @@ import { Keypair } from "@solana/web3.js";
 import { connection, DRIFT_ENV, loadAgentKeypair } from "./config";
 import type { CurrentPosition, Direction } from "./types";
 
+/**
+ * FORNEX TRADING ARCHITECTURE:
+ *
+ * The agent wallet is a separate "trading wallet" funded
+ * with devnet SOL to execute Drift Protocol positions.
+ *
+ * The vault PDA holds user deposits and tracks NAV.
+ * After each trade cycle, the agent calls update_nav()
+ * to report realized PnL back to the vault.
+ *
+ * This mirrors how real fund architectures work:
+ * - Custody wallet (vault PDA) = holds deposits safely
+ * - Trading wallet (agent) = executes strategies
+ * - NAV reconciliation = connects the two
+ *
+ * In production: vault PDA would directly CPI into Drift.
+ * For devnet prototype: agent wallet executes trades.
+ */
+
 const SOL_PERP_MARKET_INDEX = 0;
 const DRIFT_INIT_TIMEOUT_MS = 15_000;
 

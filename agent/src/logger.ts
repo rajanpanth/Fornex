@@ -10,6 +10,7 @@ import { connection, loadAgentKeypair, PROGRAM_ID, truncateReasoning, VAULT_ADDR
 import type { AgentVote, AgentVotes, ConsensusDecision } from "./types";
 
 const agent = lazyAgent();
+const VAULT_RENT_EXEMPT_LAMPORTS = 890_880;
 const PYTH_SOL_USD_PRICE_UPDATE_ACCOUNT = new PublicKey(
   "7UVimffxr9ow1uXYxsr4LHAcV58mLzhmwaeKvJ1pjLiE"
 );
@@ -61,8 +62,32 @@ export async function updateNavOnChain(newNavLamports: number): Promise<string |
       u64(new BN(Math.max(0, Math.floor(newNavLamports)))),
     ]);
 
-    return sendIx(data, [writable(VAULT_ADDRESS), signer(agent().publicKey)], "update nav");
+    const tx = await sendIx(data, [writable(VAULT_ADDRESS), signer(agent().publicKey)], "update nav");
+    await recordNavSnapshot();
+    return tx;
   });
+}
+
+export async function syncVaultNav(): Promise<void> {
+  try {
+    const vault = await fetchVault();
+    const actualBalance = await connection.getBalance(VAULT_ADDRESS);
+
+    if (vault.nav.toNumber() === 0 && actualBalance > VAULT_RENT_EXEMPT_LAMPORTS) {
+      const realNav = Math.max(actualBalance - VAULT_RENT_EXEMPT_LAMPORTS, 0);
+      await updateNavOnChain(realNav);
+      console.log(`[sync] NAV synced to ${realNav / 1e9} SOL`);
+    } else {
+      console.log(
+        `[sync] NAV checked: ${vault.nav.toNumber() / 1e9} SOL stored, ${Math.max(
+          actualBalance - VAULT_RENT_EXEMPT_LAMPORTS,
+          0
+        ) / 1e9} SOL spendable`
+      );
+    }
+  } catch (err) {
+    console.warn("[sync] NAV sync failed:", err);
+  }
 }
 
 export async function recordNavSnapshot(): Promise<string | null> {
@@ -78,7 +103,7 @@ export async function recordNavSnapshot(): Promise<string | null> {
     );
 
     const data = discriminator("global", "record_nav_snapshot");
-    return sendIx(
+    const tx = await sendIx(
       data,
       [
         writable(VAULT_ADDRESS),
@@ -88,6 +113,8 @@ export async function recordNavSnapshot(): Promise<string | null> {
       ],
       "record nav snapshot"
     );
+    console.log(`[nav] snapshot recorded: ${tx}`);
+    return tx;
   });
 }
 

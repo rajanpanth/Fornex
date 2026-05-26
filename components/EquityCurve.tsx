@@ -26,36 +26,45 @@ const RANGE_LABELS: Record<Range, string> = {
   "all": "All",
 };
 
-const RANGE_POINTS: Record<Range, number> = {
-  "24h": 24,
-  "1w":  28,
-  "1m":  30,
-  "all": 36,
-};
-
-const RANGE_INTERVAL: Record<Range, number> = {
-  "24h": 3_600_000,       // 1 h
-  "1w":  6 * 3_600_000,   // 6 h
-  "1m":  24 * 3_600_000,  // 1 day
-  "all": 48 * 3_600_000,  // 2 days
-};
-
 type ChartPoint = {
   t: string;
   nav: number;
   tradeCount?: number;
+  label?: string;
 };
 
 const NAV_RECORD_SIZE = 8 + 32 + 8 + 8 + 8 + 8 + 1;
-function buildDemoPoints(base: number, points: number, intervalMs: number): ChartPoint[] {
-  const now = Date.now();
-  return Array.from({ length: points }, (_, i) => {
-    const ts = new Date(now - (points - 1 - i) * intervalMs);
-    const hh = ts.getHours().toString().padStart(2, "0");
-    const mm = ts.getMinutes().toString().padStart(2, "0");
-    const factor = 1 - 0.03 + 0.005 * i + 0.055 * Math.sin(i * 0.55);
-    return { t: `${hh}:${mm}`, nav: Number((base * factor).toFixed(4)) };
-  });
+
+async function fetchNavHistory(): Promise<ChartPoint[]> {
+  try {
+    const connection = new Connection(RPC_URL, "confirmed");
+    const records = await connection.getProgramAccounts(PROGRAM_ID, {
+      filters: [
+        { dataSize: NAV_RECORD_SIZE },
+        { memcmp: { offset: 8, bytes: VAULT_ADDRESS.toBase58() } },
+      ],
+    });
+
+    if (records.length === 0) {
+      return [{ t: "Start", nav: 0, label: "Initial" }];
+    }
+
+    return records
+      .map((record) => decodeNavRecord(record.pubkey, record.account.data))
+      .filter((record): record is NonNullable<typeof record> => Boolean(record))
+      .sort((a, b) => Number(a.recordIndex - b.recordIndex))
+      .map((record) => ({
+        t: new Date(record.timestamp * 1000).toLocaleTimeString("en-US", {
+          hour: "2-digit",
+          minute: "2-digit",
+        }),
+        nav: Number(record.nav) / LAMPORTS_PER_SOL,
+        tradeCount: Number(record.tradeCount),
+      }));
+  } catch (err) {
+    console.warn("Failed to fetch nav history:", err);
+    return [];
+  }
 }
 
 export default function EquityCurve({ vault }: { vault: VaultData | null }) {
@@ -77,40 +86,17 @@ export default function EquityCurve({ vault }: { vault: VaultData | null }) {
 
   useEffect(() => {
     let cancelled = false;
-    async function fetchNavHistory() {
-      const connection = new Connection(RPC_URL, "confirmed");
-      const records = await connection.getProgramAccounts(PROGRAM_ID, {
-        filters: [
-          { dataSize: NAV_RECORD_SIZE },
-          { memcmp: { offset: 8, bytes: VAULT_ADDRESS.toBase58() } },
-        ],
-      });
-
-      const decoded = records
-        .map((record) => decodeNavRecord(record.pubkey, record.account.data))
-        .filter((record): record is NonNullable<typeof record> => Boolean(record))
-        .sort((a, b) => Number(a.recordIndex - b.recordIndex))
-        .map((record) => ({
-          t: new Date(record.timestamp * 1000).toLocaleTimeString([], {
-            hour: "2-digit",
-            minute: "2-digit",
-          }),
-          nav: Number(record.nav) / LAMPORTS_PER_SOL,
-          tradeCount: Number(record.tradeCount),
-        }));
-
-      if (!cancelled) setHistory(decoded);
-    }
-
     // Stagger initial fetch by 2s to avoid hitting 429s alongside useDecisions/useVault
     const initialDelay = window.setTimeout(() => {
-      fetchNavHistory().catch(() => {
-        if (!cancelled) setHistory([]);
+      fetchNavHistory().then((records) => {
+        if (!cancelled) setHistory(records);
       });
     }, 2_000);
 
     const interval = window.setInterval(
-      () => fetchNavHistory().catch(() => undefined),
+      () => fetchNavHistory().then((records) => {
+        if (!cancelled) setHistory(records);
+      }),
       30_000
     );
     return () => {
@@ -120,15 +106,11 @@ export default function EquityCurve({ vault }: { vault: VaultData | null }) {
     };
   }, []);
 
-  const isDemo = history.length === 0;
-
   const chartData = useMemo(() => {
     const visibleHistory = range === "24h" ? history.slice(-24) : history;
-    if (visibleHistory.length > 0) return visibleHistory;
-
-    const rawNav = vault ? Number(vault.nav) / LAMPORTS_PER_SOL : 0;
-    const base = rawNav > 0.01 ? rawNav : 10;
-    return buildDemoPoints(base, RANGE_POINTS[range], RANGE_INTERVAL[range]);
+    return visibleHistory.length > 0
+      ? visibleHistory
+      : [{ t: "Start", nav: vault ? Number(vault.nav) / LAMPORTS_PER_SOL : 0, label: "Initial" }];
   }, [range, vault, history]);
 
   // Dynamic Y-axis domain with padding so the line never sits at the edge
@@ -157,7 +139,6 @@ export default function EquityCurve({ vault }: { vault: VaultData | null }) {
           <TrendingUp size={14} />
           PERFORMANCE HISTORY
         </span>
-        {isDemo && <span className="equity-demo-badge">DEMO</span>}
         <div className="equity-range-picker" ref={dropRef}>
           <button
             className="equity-range-btn"
@@ -264,7 +245,9 @@ export default function EquityCurve({ vault }: { vault: VaultData | null }) {
           </AreaChart>
         </ResponsiveContainer>
       </div>
+      <p className="equity-onchain-subtitle">
+        Every data point is a real on-chain NavRecord account
+      </p>
     </div>
   );
 }
-

@@ -8,7 +8,12 @@ import {
   openPosition,
   shutdownExecutor,
 } from "./executor";
-import { fetchVault, logDecisionOnChain, recordNavSnapshot, updateNavOnChain } from "./logger";
+import {
+  fetchVault,
+  logDecisionOnChain,
+  syncVaultNav,
+  updateNavOnChain,
+} from "./logger";
 import { payAgentForTrade } from "./paysh";
 import { fetchSignals } from "./signals";
 import type { AgentVotes, ConsensusDecision, CurrentPosition, MarketSignals } from "./types";
@@ -16,6 +21,10 @@ import type { AgentVotes, ConsensusDecision, CurrentPosition, MarketSignals } fr
 const LOOP_MS = 900_000;
 const SINGLE_CYCLE =
   process.argv.includes("--once") || process.env.FORNEX_SINGLE_CYCLE === "1";
+const ALLOCATION_PCT = 0.05;
+const MIN_COLLATERAL_SOL = 0.05;
+const MAX_COLLATERAL_SOL = 1.0;
+const MIN_NAV_LAMPORTS = 1_000_000;
 const BOX_WIDTH = 55;
 const BORDER = "═".repeat(BOX_WIDTH);
 let running = false;
@@ -28,6 +37,8 @@ async function runCycle(): Promise<void> {
   const cycleStartedAt = new Date();
 
   try {
+    await safeStep("sync vault NAV", syncVaultNav, 60_000);
+
     const vault = await safeStep("fetch vault", fetchVault);
     if (!vault) return;
 
@@ -38,6 +49,10 @@ async function runCycle(): Promise<void> {
 
     const signals = await safeStep("fetch signals", fetchSignals, 60_000);
     if (!signals) return;
+
+    const currentVault = (await safeStep("fetch vault NAV", fetchVault)) ?? vault;
+    const vaultNavSOL = currentVault.nav.toNumber() / LAMPORTS_PER_SOL;
+    const collateral = calculateCollateral(vaultNavSOL);
 
     const position = await safeStep("read current position", getCurrentPosition, 45_000);
     const positionLabel = position
@@ -60,7 +75,7 @@ async function runCycle(): Promise<void> {
 
     if (consensus.shouldExecute && !position && tradeDirection !== "FLAT") {
       executionSig = await safeStep("execute Drift order", () =>
-        openPosition(tradeDirection, consensus.leverage, 0.1)
+        openPosition(tradeDirection, consensus.leverage, collateral)
       , 60_000);
       logSig = await safeStep("log decision on-chain", () =>
         logDecisionOnChain(votes, consensus, Boolean(executionSig), executionSig)
@@ -80,16 +95,16 @@ async function runCycle(): Promise<void> {
       , 60_000);
     }
 
-    const pnlSol = (await safeStep("read vault PnL", getVaultPnL, 45_000)) ?? 0;
-    const oldNavLamports = vault.nav.toNumber();
-    const newNavLamports = oldNavLamports + Math.round(pnlSol * LAMPORTS_PER_SOL);
-    const safeNavLamports = Math.max(0, newNavLamports);
+    const realizedPnLSOL = (await safeStep("read vault PnL", getVaultPnL, 45_000)) ?? 0;
+    const realizedPnLLamports = Math.round(realizedPnLSOL * LAMPORTS_PER_SOL);
+    const oldNavLamports = currentVault.nav.toNumber();
+    const newNavLamports = Math.max(
+      oldNavLamports + realizedPnLLamports,
+      MIN_NAV_LAMPORTS
+    );
     const navSig = await safeStep("update NAV on-chain", () =>
-      updateNavOnChain(safeNavLamports)
+      updateNavOnChain(newNavLamports)
     , 60_000);
-    const navRecordSig = navSig
-      ? await safeStep("record NAV snapshot", recordNavSnapshot, 60_000)
-      : null;
 
     printCycle({
       signals,
@@ -99,11 +114,13 @@ async function runCycle(): Promise<void> {
       paymentSig,
       logSig,
       navSig,
-      navRecordSig,
+      navRecordSig: null,
       cycleStartedAt,
       cycleNumber,
       oldNavLamports,
-      newNavLamports: safeNavLamports,
+      newNavLamports,
+      vaultNavSOL,
+      collateral,
       position,
     });
   } catch (error) {
@@ -136,6 +153,13 @@ function fallbackVotes(reasoning: string): AgentVotes {
   return { bull: vote, bear: vote, zen: vote };
 }
 
+function calculateCollateral(vaultNavSOL: number): number {
+  return Math.min(
+    Math.max(vaultNavSOL * ALLOCATION_PCT, MIN_COLLATERAL_SOL),
+    MAX_COLLATERAL_SOL
+  );
+}
+
 function withTimeout<T>(
   promise: Promise<T>,
   ms: number,
@@ -164,6 +188,8 @@ function printCycle({
   cycleNumber,
   oldNavLamports,
   newNavLamports,
+  vaultNavSOL,
+  collateral,
 }: {
   signals: MarketSignals;
   votes: AgentVotes;
@@ -177,12 +203,15 @@ function printCycle({
   cycleNumber: number;
   oldNavLamports: number;
   newNavLamports: number;
+  vaultNavSOL: number;
+  collateral: number;
   position: CurrentPosition | null;
 }) {
   const navSol = newNavLamports / LAMPORTS_PER_SOL;
 
   printCycleHeader(cycleNumber, time(cycleStartedAt));
   printSignals(signals);
+  printCollateral(vaultNavSOL, collateral);
   printVotes(votes);
   printResult(consensus, executionSig || logSig, navSol);
   if (navSig) console.log(`[agent] NAV tx: ${shortSig(navSig)}`);
@@ -206,6 +235,12 @@ function printSignals(signals: MarketSignals) {
   console.log(`│  ⚖️  L/S Ratio:    ${signals.lsRatio.toFixed(3)}`);
   console.log(`│  🎯 Liq Wall:     $${signals.liqWallPrice.toFixed(2)}`);
   console.log("└────────────────────────────────────────────┘");
+}
+
+function printCollateral(vaultNavSOL: number, collateral: number) {
+  console.log(
+    `│  💼 Collateral: ${collateral.toFixed(4)} SOL (5% of ${vaultNavSOL.toFixed(4)} SOL vault)`
+  );
 }
 
 function printVotes(votes: AgentVotes) {
@@ -281,7 +316,8 @@ process.on("SIGINT", async () => {
   process.exit(0);
 });
 
-void initExecutor().finally(() => {
+void initExecutor().finally(async () => {
+  await syncVaultNav();
   void runCycle().finally(async () => {
     if (SINGLE_CYCLE) {
       await shutdownExecutor();

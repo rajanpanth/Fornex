@@ -5,9 +5,15 @@ export function useToasts() {
   const [toasts, setToasts] = useState<ToastType[]>([]);
 
   const addToast = useCallback(
-    (type: ToastType["type"], title: string, body: string, tx?: string) => {
+    (
+      type: ToastType["type"],
+      title: string,
+      body: string,
+      tx?: string,
+      link?: ToastType["link"]
+    ) => {
       const id = Math.random().toString(36).slice(2);
-      setToasts((prev) => [...prev, { id, type, title, body, tx }]);
+      setToasts((prev) => [...prev, { id, type, title, body, tx, link }]);
       setTimeout(() => {
         setToasts((prev) => prev.filter((t) => t.id !== id));
       }, 5000);
@@ -46,6 +52,16 @@ export default function ToastContainer({
               rel="noopener noreferrer"
             >
               View TX ↗
+            </a>
+          )}
+          {t.link && (
+            <a
+              className="toast-tx"
+              href={t.link.href}
+              target="_blank"
+              rel="noopener noreferrer"
+            >
+              {t.link.label}
             </a>
           )}
         </div>

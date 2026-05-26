@@ -36,6 +36,26 @@ function AgentRow({
   );
 }
 
+function getConsensusBadge(
+  bull: number,
+  bear: number,
+  zen: number
+): { label: string; cls: string } {
+  const votes = [bull, bear, zen];
+  const allSame = votes.every((vote) => vote === votes[0]);
+  const zenFlat = zen === 0;
+  const bullAlone = bull !== bear && bull !== zen;
+  const bearAlone = bear !== bull && bear !== zen;
+
+  if (allSame) return { label: "⚡ UNANIMOUS", cls: "emerald" };
+  if (zenFlat && bull !== 0 && bear !== 0 && bull === bear) {
+    return { label: "⚠️ ZEN VETOED", cls: "amber" };
+  }
+  if (bullAlone) return { label: "🐂 BULL OVERRULED", cls: "blue" };
+  if (bearAlone) return { label: "🐻 BEAR OVERRULED", cls: "blue" };
+  return { label: "2/3 MAJORITY", cls: "default" };
+}
+
 export default function DecisionCard({ decision }: { decision: Decision }) {
   const [expanded, setExpanded] = useState(false);
   const dir = dirLabel(decision.consensus.direction);
@@ -46,7 +66,11 @@ export default function DecisionCard({ decision }: { decision: Decision }) {
   const longCount = votes.filter((v) => v.direction === 1).length;
   const shortCount = votes.filter((v) => v.direction === 2).length;
   const flatCount = votes.filter((v) => v.direction === 0).length;
-  const winningCount = Math.max(longCount, shortCount, flatCount);
+  const consensusBadge = getConsensusBadge(
+    decision.bullVote.direction,
+    decision.bearVote.direction,
+    decision.zenVote.direction
+  );
 
   const consensusStr =
     dir === "LONG"
@@ -57,12 +81,6 @@ export default function DecisionCard({ decision }: { decision: Decision }) {
   const sameDirection = votes.filter(
     (v) => v.direction === decision.consensus.direction
   ).length;
-  const disagreementBadge =
-    sameDirection === 3
-      ? "3/3 UNANIMOUS"
-      : decision.zenVote.direction === 0 && decision.consensus.direction !== 0
-      ? "ZEN VETOED"
-      : `${sameDirection}/3 MAJORITY`;
 
   const footerCls = decision.executed
     ? dir === "LONG"
@@ -91,16 +109,8 @@ export default function DecisionCard({ decision }: { decision: Decision }) {
           <Bot size={17} />
         </span>
         <span className={`dir-badge ${cls}`}>{dir}</span>
-        <span
-          className={`dc-disagreement ${
-            sameDirection === 3
-              ? "unanimous"
-              : disagreementBadge === "ZEN VETOED"
-              ? "veto"
-              : "majority"
-          }`}
-        >
-          {disagreementBadge}
+        <span className={`dc-disagreement badge-${consensusBadge.cls}`}>
+          {consensusBadge.label}
         </span>
         <span className="dc-market">{decision.market || "SOL-PERP"}</span>
         <span className="dc-leverage">
@@ -119,11 +129,13 @@ export default function DecisionCard({ decision }: { decision: Decision }) {
 
       <div className="dc-vote-breakdown">
         <span>Vote breakdown:</span>
-        <VoteBreakdownRow label="LONG" count={longCount} winning={dir === "LONG"} />
-        <VoteBreakdownRow label="FLAT" count={flatCount} winning={dir === "FLAT"} />
-        <VoteBreakdownRow label="SHORT" count={shortCount} winning={dir === "SHORT"} />
+        <VoteBreakdown
+          bull={decision.bullVote.direction}
+          bear={decision.bearVote.direction}
+          zen={decision.zenVote.direction}
+        />
         <strong className={`dc-vote-badge ${sameDirection === 3 ? "unanimous" : "majority"}`}>
-          {sameDirection === 3 ? "UNANIMOUS" : `${winningCount}/3 MAJORITY`}
+          {sameDirection === 3 ? "UNANIMOUS" : `${sameDirection}/3 MAJORITY`}
         </strong>
       </div>
 
@@ -192,26 +204,38 @@ export default function DecisionCard({ decision }: { decision: Decision }) {
   );
 }
 
-function VoteBreakdownRow({
-  label,
-  count,
-  winning,
+function VoteBreakdown({
+  bull,
+  bear,
+  zen,
 }: {
-  label: string;
-  count: number;
-  winning: boolean;
+  bull: number;
+  bear: number;
+  zen: number;
 }) {
+  const directions = ["LONG", "SHORT", "FLAT"];
+  const dirNums = [1, 2, 0];
+  const votes = [bull, bear, zen];
+
   return (
-    <div className="dc-vote-row">
-      <div className="dc-vote-bar">
-        <span
-          className={winning ? "winning" : ""}
-          style={{ width: `${(count / 3) * 100}%` }}
-        />
-      </div>
-      <code>
-        {label} {count}/3 agents
-      </code>
+    <div className="vote-breakdown">
+      {directions.map((direction, index) => {
+        const count = votes.filter((vote) => vote === dirNums[index]).length;
+        if (count === 0) return null;
+
+        return (
+          <div key={direction} className="vote-bar-row">
+            <span className="vote-label">{direction}</span>
+            <div className="vote-bar-track">
+              <div
+                className={`vote-bar-fill ${direction.toLowerCase()}`}
+                style={{ width: `${(count / 3) * 100}%` }}
+              />
+            </div>
+            <span className="vote-count">{count}/3</span>
+          </div>
+        );
+      })}
     </div>
   );
 }

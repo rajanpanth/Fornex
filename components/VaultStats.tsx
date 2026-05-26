@@ -1,6 +1,8 @@
 import { LAMPORTS_PER_SOL } from "@solana/web3.js";
-import { Activity, CircleDollarSign, Percent, Wallet } from "lucide-react";
+import { Activity, BarChart3, CircleDollarSign, Percent, Wallet } from "lucide-react";
 import { VaultData } from "../lib/chain";
+
+const FNRX_MINT_ADDRESS = "BNBf6ed4h8dZiVd8wpUkcv8BUyFsp75eidkcUhSb94vj";
 
 export default function VaultStats({
   vault,
@@ -70,14 +72,22 @@ export default function VaultStats({
         <div className="vault-stat-box">
           <Wallet size={17} className="vault-stat-icon" />
           <div className="vault-stat-label" title="$FNRX is your vault share token. Hold it in Phantom. Redeem anytime for SOL.">
-            $FNRX Balance
+            $FNRX BALANCE
           </div>
           <div className="vault-stat-value">
-            {fnrxBalance !== null ? `${fnrxBalance.toFixed(4)} FNRX` : "—"}
+            {fnrxBalance !== null ? fnrxBalance.toFixed(4) : "—"}
           </div>
           <div className="vault-stat-sub neutral">
-            {fnrxBalance !== null ? `≈ ${userSharesSol.toFixed(3)} SOL current value` : "Connect wallet"}
+            {fnrxBalance !== null ? "vault share tokens in wallet" : "Connect wallet"}
           </div>
+          <a
+            href={`https://explorer.solana.com/address/${FNRX_MINT_ADDRESS}?cluster=devnet`}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="mint-link"
+          >
+            View $FNRX on Explorer ↗
+          </a>
         </div>
 
         <div className="vault-stat-box">
@@ -85,6 +95,13 @@ export default function VaultStats({
           <div className="vault-stat-label">Win Rate</div>
           <div className="vault-stat-value">{winRate}%</div>
           <div className="vault-stat-sub neutral">{trades} trades</div>
+        </div>
+
+        <div className="vault-stat-box">
+          <BarChart3 size={17} className="vault-stat-icon" />
+          <div className="vault-stat-label">Trade Count</div>
+          <div className="vault-stat-value">{trades}</div>
+          <div className="vault-stat-sub neutral">on-chain decisions</div>
         </div>
       </div>
     </div>

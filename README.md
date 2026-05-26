@@ -13,24 +13,25 @@
 
 | Resource | Link |
 |---|---|
-| Live App | https://fornexlab.vercel.app/ |
-| Demo Video | https://YOUR-DEMO-VIDEO-LINK |
-| Program | https://explorer.solana.com/address/H6vbfTp6XwfFSHWtpzjZuyrx6bpnp8Rwt6bVZAUT6vZf?cluster=devnet |
-| Vault | https://explorer.solana.com/address/HMkL7zzAroE919esVY6HSMYzB2ejHM5m4A8JKCSrgBXR?cluster=devnet |
-| $FNRX Mint | https://explorer.solana.com/address/BNBf6ed4h8dZiVd8wpUkcv8BUyFsp75eidkcUhSb94vj?cluster=devnet |
-| Agent Running Since | May 24, 2026 |
-| Decisions On-Chain | Live, growing every 15 min |
+| Program | [Explorer](https://explorer.solana.com/address/H6vbfTp6XwfFSHWtpzjZuyrx6bpnp8Rwt6bVZAUT6vZf?cluster=devnet) |
+| Vault PDA | [Explorer](https://explorer.solana.com/address/HMkL7zzAroE919esVY6HSMYzB2ejHM5m4A8JKCSrgBXR?cluster=devnet) |
+| $FNRX Mint | [Explorer](https://explorer.solana.com/address/BNBf6ed4h8dZiVd8wpUkcv8BUyFsp75eidkcUhSb94vj?cluster=devnet) |
+| Agent Running Since | May 22, 2026 |
+| On-Chain Decisions | 27+ (growing every 15 min) |
 
-## What Makes Fornex Technically Heavy
+## What Makes This Technically Heavy
 
-1. **Real SPL Token** — $FNRX vault shares visible in Phantom
-2. **Pyth Oracle** — SOL price verified on-chain in Rust
-3. **On-chain NAV Ledger** — Every performance point on Solana
-4. **Helius Indexer** — Real-time webhook-powered feed
-5. **Drift Protocol** — Real perp execution on devnet
-6. **Multi-agent AI** — 3 GPT-4o agents with consensus engine
-7. **pay.sh payments** — Agent earns per trade autonomously
-8. **12 Anchor instructions** — Complex on-chain business logic
+| Feature | Technology | Why It's Hard |
+|---|---|---|
+| Vault Shares | Real SPL Token ($FNRX) | Token Program CPI in Rust |
+| Trade Allocation | 5% of vault NAV dynamically | On-chain math |
+| Performance History | NavRecord accounts on Solana | Custom PDA indexing |
+| Real-time Feed | Chain polling + SSE | Blockchain indexing |
+| Trade Execution | Drift Protocol SDK | DeFi protocol integration |
+| AI Agents | GPT-4o × 3 parallel | Multi-agent consensus |
+| Payments | pay.sh streaming | Agentic micropayments |
+| Transparency | On-chain reasoning [u8;200] | Permanent + auditable |
+| Price Validation | Dynamic priority fees | RPC fee estimation |
 
 ## Technical Features
 

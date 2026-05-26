@@ -1,12 +1,11 @@
 import Head from "next/head";
 import Link from "next/link";
 import { useRouter } from "next/router";
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { useConnection, useWallet } from "@solana/wallet-adapter-react";
 import { WalletMultiButton } from "@solana/wallet-adapter-react-ui";
 import {
   ComputeBudgetProgram,
-  Connection,
   LAMPORTS_PER_SOL,
   PublicKey,
   SystemProgram,
@@ -16,6 +15,7 @@ import {
 } from "@solana/web3.js";
 import {
   ASSOCIATED_TOKEN_PROGRAM_ID,
+  getAccount,
   getAssociatedTokenAddress,
   TOKEN_PROGRAM_ID,
 } from "@solana/spl-token";
@@ -36,6 +36,7 @@ import { useVault } from "../hooks/useVault";
 import { useDecisions } from "../hooks/useDecisions";
 import { usePosition } from "../hooks/usePosition";
 import { useAgentCycle } from "../hooks/useAgentCycle";
+import { usePriorityFee } from "../hooks/usePriorityFee";
 
 import VaultStats from "../components/VaultStats";
 import PositionPanel from "../components/PositionPanel";
@@ -46,6 +47,7 @@ import AgentPerformanceChart from "../components/AgentPerformanceChart";
 import AgentEarnings from "../components/AgentEarnings";
 import StrategyOrdersPanel from "../components/StrategyOrdersPanel";
 import ToastContainer, { useToasts } from "../components/Toast";
+import StatusBar from "../components/StatusBar";
 
 export default function AppDashboard() {
   const { connection } = useConnection();
@@ -57,24 +59,10 @@ export default function AppDashboard() {
   const [priceFlash, setPriceFlash] = useState<"up" | "down" | null>(null);
   const [fnrxBalance, setFnrxBalance] = useState<number | null>(null);
   const [newDecisionAlert, setNewDecisionAlert] = useState(false);
-  const [priorityFee, setPriorityFee] = useState<"DYNAMIC" | "FAST" | "TURBO">("DYNAMIC");
-  const [feeDropdownOpen, setFeeDropdownOpen] = useState(false);
-  const feeRef = useRef<HTMLDivElement>(null);
-  const [pythStatus, setPythStatus] = useState<"UP" | "DOWN">("UP");
-  const [rpcStatus, setRpcStatus] = useState<"UP" | "DOWN">("UP");
   const [mobileTab, setMobileTab] = useState<"vault" | "feed" | "trade" | "stats">("vault");
+  const { level: priorityFee, setLevel: setPriorityFee, currentFee } = usePriorityFee();
 
   useEffect(() => { setMounted(true); }, []);
-
-  useEffect(() => {
-    const handler = (e: MouseEvent) => {
-      if (feeRef.current && !feeRef.current.contains(e.target as Node)) {
-        setFeeDropdownOpen(false);
-      }
-    };
-    document.addEventListener("mousedown", handler);
-    return () => document.removeEventListener("mousedown", handler);
-  }, []);
 
   // Hooks
   const { vault, nav, trades, winRate, refresh } = useVault();
@@ -111,47 +99,18 @@ export default function AppDashboard() {
     };
   }, [refreshDecisions]);
 
-  useEffect(() => {
-    async function checkStatuses() {
-      try {
-        const [pyth, rpc] = await Promise.all([
-          fetch(
-            "https://hermes.pyth.network/api/latest_price_feeds?ids[]=0xef0d8b6fda2ceba41da15d4095d1da392a0d2f8ed0c6c7bc0f4cfac8c280b56d"
-          ),
-          connection.getLatestBlockhash(),
-        ]);
-        setPythStatus(pyth.ok ? "UP" : "DOWN");
-        setRpcStatus(rpc.blockhash ? "UP" : "DOWN");
-      } catch {
-        setPythStatus("DOWN");
-        setRpcStatus("DOWN");
-      }
-    }
-    void checkStatuses();
-    const id = window.setInterval(checkStatuses, 30_000);
-    return () => window.clearInterval(id);
-  }, [connection]);
-
   const refreshFnrxBalance = useCallback(async () => {
     if (!wallet.publicKey) {
       setFnrxBalance(null);
       return;
     }
-    try {
-      const ata = await getAssociatedTokenAddress(
-        VAULT_MINT_ADDRESS,
-        wallet.publicKey
-      );
-      const balance = await connection.getTokenAccountBalance(ata);
-      setFnrxBalance(balance.value.uiAmount ?? 0);
-    } catch {
-      setFnrxBalance(0);
-    }
+    const balance = await getFnrxBalance(connection, wallet.publicKey);
+    setFnrxBalance(balance);
   }, [connection, wallet.publicKey]);
 
   useEffect(() => {
     void refreshFnrxBalance();
-    const id = setInterval(() => void refreshFnrxBalance(), 30_000);
+    const id = setInterval(() => void refreshFnrxBalance(), 15_000);
     return () => clearInterval(id);
   }, [refreshFnrxBalance]);
 
@@ -190,6 +149,16 @@ export default function AppDashboard() {
       setLoading(true);
       try {
         const units = parseDecimalUnits(amount, 9);
+        const estimatedSharesRaw =
+          kind === "deposit"
+            ? vault && vault.totalShares > 0n && vault.nav > 0n
+              ? (units * vault.totalShares) / vault.nav
+              : units
+            : units;
+        const estimatedSolOutRaw =
+          kind === "withdraw" && vault && vault.totalShares > 0n
+            ? (units * vault.nav) / vault.totalShares
+            : 0n;
         const [userDepositPda] = PublicKey.findProgramAddressSync(
           [
             Buffer.from("user_deposit"),
@@ -234,11 +203,10 @@ export default function AppDashboard() {
           data,
         });
         const tx = new Transaction();
-        const feeMicroLamports = await resolvePriorityFee(priorityFee, connection);
-        if (feeMicroLamports > 0) {
+        if (currentFee > 0) {
           tx.add(
             ComputeBudgetProgram.setComputeUnitPrice({
-              microLamports: feeMicroLamports,
+              microLamports: currentFee,
             })
           );
         }
@@ -250,12 +218,25 @@ export default function AppDashboard() {
         const signed = await wallet.signTransaction(tx);
         const sig = await connection.sendRawTransaction(signed.serialize());
         await connection.confirmTransaction(sig, "confirmed");
-        addToast(
-          "success",
-          `${kind === "deposit" ? "Deposit" : "Withdrawal"} confirmed`,
-          `${sig.slice(0, 8)}…${sig.slice(-8)}`,
-          sig
-        );
+        if (kind === "deposit") {
+          addToast(
+            "success",
+            "Deposit confirmed!",
+            `${formatTokenAmount(estimatedSharesRaw)} $FNRX tokens minted to your wallet.`,
+            sig,
+            {
+              href: `https://explorer.solana.com/address/${userTokenAccount.toBase58()}?cluster=devnet`,
+              label: "View $FNRX ATA ↗",
+            }
+          );
+        } else {
+          addToast(
+            "success",
+            "Withdrawal confirmed",
+            `${formatTokenAmount(estimatedSharesRaw)} $FNRX tokens burned. ${formatTokenAmount(estimatedSolOutRaw)} SOL returned to your wallet.`,
+            sig
+          );
+        }
         await refresh();
         await refreshFnrxBalance();
       } catch (err: any) {
@@ -264,7 +245,7 @@ export default function AppDashboard() {
         setLoading(false);
       }
     },
-    [wallet, connection, addToast, refresh, refreshFnrxBalance, priorityFee]
+    [wallet, connection, addToast, refresh, refreshFnrxBalance, currentFee, vault]
   );
 
   return (
@@ -319,44 +300,7 @@ export default function AppDashboard() {
           </div>
 
           <div className="app-topbar-right">
-            <div className="priority-fee" ref={feeRef}>
-              <span className="label">Priority Fee:</span>
-              <button
-                className="fee-value"
-                onClick={() => setFeeDropdownOpen(o => !o)}
-                aria-expanded={feeDropdownOpen}
-                aria-haspopup="listbox"
-              >
-                {priorityFee}
-                <svg width="10" height="6" viewBox="0 0 10 6" fill="none" aria-hidden="true">
-                  <path d="M1 1l4 4 4-4" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
-                </svg>
-              </button>
-              {feeDropdownOpen && (
-                <div className="fee-dropdown" role="listbox">
-                  {(["DYNAMIC", "FAST", "TURBO"] as const).map(opt => (
-                    <button
-                      key={opt}
-                      role="option"
-                      aria-selected={priorityFee === opt}
-                      className={`fee-option${priorityFee === opt ? " active" : ""}`}
-                      onClick={() => { setPriorityFee(opt); setFeeDropdownOpen(false); }}
-                    >
-                      {opt}
-                    </button>
-                  ))}
-                </div>
-              )}
-            </div>
-            <div className="pyth-status">
-              <span className={pythStatus === "UP" ? "green" : "red"}>●</span>
-              Pyth {pythStatus}
-            </div>
-            <div className="pyth-status">
-              <span className={rpcStatus === "UP" ? "green" : "red"}>●</span>
-              Solana Devnet
-            </div>
-            <span className="badge-devnet">DEVNET</span>
+            <StatusBar level={priorityFee} setLevel={setPriorityFee} />
             {mounted && <WalletMultiButton />}
           </div>
         </header>
@@ -399,7 +343,7 @@ export default function AppDashboard() {
             <AgentEarnings trades={trades} winRate={winRate} cycle={cycle} />
             <AgentPerformanceChart decisions={decisions} />
             <EquityCurve vault={vault} />
-            <StrategyOrdersPanel decision={decisions[0] ?? null} />
+            <StrategyOrdersPanel latestDecision={decisions[0] ?? null} />
           </div>
         </div>
 
@@ -441,20 +385,6 @@ export default function AppDashboard() {
   );
 }
 
-async function resolvePriorityFee(
-  mode: "DYNAMIC" | "FAST" | "TURBO",
-  connection: Connection
-): Promise<number> {
-  if (mode === "FAST") return 10_000;
-  if (mode === "TURBO") return 100_000;
-  try {
-    const fees = await connection.getRecentPrioritizationFees();
-    return Math.max(...fees.map((fee) => fee.prioritizationFee), 0);
-  } catch {
-    return 0;
-  }
-}
-
 function parseDecimalUnits(value: string, decimals: number): bigint {
   const normalized = value.trim();
   if (!normalized || normalized === ".") return 0n;
@@ -467,4 +397,21 @@ function parseDecimalUnits(value: string, decimals: number): bigint {
     .padEnd(decimals, "0");
 
   return BigInt(whole) * 10n ** BigInt(decimals) + BigInt(fraction || "0");
+}
+
+async function getFnrxBalance(
+  connection: Parameters<typeof getAccount>[0],
+  walletPublicKey: PublicKey
+): Promise<number> {
+  try {
+    const ata = await getAssociatedTokenAddress(VAULT_MINT_ADDRESS, walletPublicKey);
+    const account = await getAccount(connection, ata);
+    return Number(account.amount) / LAMPORTS_PER_SOL;
+  } catch {
+    return 0;
+  }
+}
+
+function formatTokenAmount(rawAmount: bigint): string {
+  return (Number(rawAmount) / LAMPORTS_PER_SOL).toFixed(4);
 }

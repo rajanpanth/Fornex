@@ -68,6 +68,10 @@ export type Toast = {
   title: string;
   body: string;
   tx?: string;
+  link?: {
+    href: string;
+    label: string;
+  };
 };
 
 export type VaultData = {
