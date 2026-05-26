@@ -150,9 +150,9 @@ export default function DecisionCard({ decision }: { decision: Decision }) {
       ) : (
         <div
           className="dc-pyth-price dc-pyth-unavailable"
-          title="Pyth price was not available at time of decision"
+          title="This decision was logged successfully, but no fresh Pyth price update account was attached to the decision transaction."
         >
-          <span>Pyth price unavailable at decision time</span>
+          <span>Decision logged · Pyth snapshot not attached</span>
         </div>
       )}
 
