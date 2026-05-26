@@ -3190,6 +3190,12 @@ a { color: var(--sapphire); text-decoration: none; }
   }
 }
 
+@media (max-width: 540px) {
+  .live-decision-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
 @media (max-width: 680px) {
   .cinematic-nav {
     min-height: 76px;
@@ -4775,5 +4781,2090 @@ a { color: var(--sapphire); text-decoration: none; }
   .dc-proof-line {
     grid-template-columns: 1fr;
     gap: 4px;
+  }
+}
+
+/* ═══════════════════════════════════════════════════════════
+   UI/UX PREMIUM IMPROVEMENT PASS
+   ─ Accessibility, contrast, mobile nav, scroll, focus,
+     motion, spacing, component polish
+   ═══════════════════════════════════════════════════════════ */
+
+/* ── 1. CSS Variable Contrast Fixes ──────────────────────── */
+:root {
+  /* Raise text tokens to meet WCAG AA on dark backgrounds */
+  --text-secondary: #8b9cbf;
+  --text-tertiary:  #5e738a;
+}
+
+/* ── 2. Global Focus States ──────────────────────────────── */
+:focus-visible {
+  outline: 2px solid rgba(219, 255, 108, 0.75);
+  outline-offset: 3px;
+  border-radius: 4px;
+}
+
+.decision-card-header:focus-visible,
+.dw-tab:focus-visible,
+.dw-max-btn:focus-visible,
+.equity-toggle-btn:focus-visible {
+  outline: 2px solid rgba(219, 255, 108, 0.75);
+  outline-offset: 2px;
+  border-radius: 8px;
+}
+
+button:focus-visible,
+a:focus-visible,
+[role="button"]:focus-visible,
+[tabindex="0"]:focus-visible {
+  outline: 2px solid rgba(219, 255, 108, 0.75);
+  outline-offset: 2px;
+}
+
+/* ── 3. Reduced-Motion Preference ─────────────────────────── */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}
+
+/* ── 4. Landing: cinematic-page overflow fix ─────────────── */
+.cinematic-page {
+  overflow-x: hidden;
+}
+
+/* ── 5. Cinematic Nav: link underline micro-interaction ───── */
+.cinematic-nav nav a {
+  position: relative;
+}
+
+.cinematic-nav nav a::after {
+  content: '';
+  position: absolute;
+  left: 0;
+  bottom: -3px;
+  width: 0;
+  height: 1.5px;
+  background: #dbff6c;
+  border-radius: 2px;
+  transition: width 220ms ease;
+}
+
+.cinematic-nav nav a:hover::after {
+  width: 100%;
+}
+
+/* ── 6. Landing: Mobile hamburger & overlay ─────────────── */
+.nav-hamburger {
+  display: none;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  width: 44px;
+  height: 44px;
+  gap: 5px;
+  background: rgba(15, 29, 31, 0.55);
+  border: 1px solid rgba(219, 255, 108, 0.24);
+  border-radius: 10px;
+  cursor: pointer;
+  transition: background 180ms ease, border-color 180ms ease;
+  flex-shrink: 0;
+}
+
+.nav-hamburger:hover {
+  background: rgba(20, 37, 39, 0.82);
+  border-color: rgba(219, 255, 108, 0.52);
+}
+
+.nav-hamburger span {
+  display: block;
+  width: 18px;
+  height: 1.5px;
+  background: rgba(255, 255, 255, 0.85);
+  border-radius: 2px;
+  transition: transform 220ms ease, opacity 180ms ease;
+}
+
+.nav-hamburger[aria-expanded="true"] span:nth-child(1) {
+  transform: translateY(6.5px) rotate(45deg);
+}
+
+.nav-hamburger[aria-expanded="true"] span:nth-child(2) {
+  opacity: 0;
+}
+
+.nav-hamburger[aria-expanded="true"] span:nth-child(3) {
+  transform: translateY(-6.5px) rotate(-45deg);
+}
+
+/* Body scroll lock when mobile nav is open */
+body.nav-open {
+  overflow: hidden;
+  touch-action: none;
+}
+
+.mobile-nav-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 51;
+  background: rgba(1, 15, 17, 0.97);
+  backdrop-filter: blur(24px);
+  -webkit-backdrop-filter: blur(24px);
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  justify-content: center;
+  padding: 80px clamp(32px, 8vw, 80px);
+  gap: 0;
+  pointer-events: none;
+  opacity: 0;
+  transform: translateY(-12px);
+  transition: opacity 280ms ease, transform 280ms ease;
+}
+
+.mobile-nav-overlay.open {
+  pointer-events: all;
+  opacity: 1;
+  transform: translateY(0);
+}
+
+.mobile-nav-overlay a {
+  display: block;
+  padding: 16px 0;
+  color: rgba(255, 255, 255, 0.72);
+  font-size: clamp(26px, 6vw, 42px);
+  font-weight: 700;
+  letter-spacing: -0.01em;
+  text-decoration: none;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+  width: 100%;
+  transition: color 150ms ease, padding-left 150ms ease;
+}
+
+.mobile-nav-overlay a:first-child {
+  border-top: 1px solid rgba(255, 255, 255, 0.06);
+}
+
+.mobile-nav-overlay a:hover {
+  color: #dbff6c;
+  padding-left: 10px;
+}
+
+.mobile-nav-launch {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  margin-top: 36px;
+  padding: 16px 32px;
+  background: #dbff6c;
+  color: #07100a;
+  font-size: 16px;
+  font-weight: 800;
+  border-radius: 999px;
+  text-decoration: none;
+  transition: background 180ms ease;
+}
+
+.mobile-nav-launch:hover {
+  background: #e8ff99;
+  color: #07100a;
+}
+
+.mobile-nav-close {
+  position: absolute;
+  top: 20px;
+  right: 20px;
+  width: 44px;
+  height: 44px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 10px;
+  color: rgba(255, 255, 255, 0.7);
+  cursor: pointer;
+  font-size: 20px;
+  transition: all 160ms ease;
+}
+
+.mobile-nav-close:hover {
+  background: rgba(255, 255, 255, 0.1);
+  color: #fff;
+}
+
+@media (max-width: 1080px) {
+  .cinematic-nav {
+    grid-template-columns: 1fr auto;
+    gap: 20px;
+  }
+
+  .nav-hamburger {
+    display: flex;
+  }
+
+  /* Hide the nav-pill in the grid (reinserted in mobile overlay) */
+  .cinematic-nav > .nav-pill {
+    display: none;
+  }
+}
+
+/* ── 7. live-decisions-copy layout fix ───────────────────── */
+/* kicker & heading span the full width; copy+counter form a row */
+.live-decisions-copy {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(240px, auto);
+  grid-template-rows: auto auto;
+  gap: 16px 36px;
+  align-items: end;
+}
+
+.live-decisions-copy .section-kicker {
+  grid-column: 1 / -1;
+  margin-bottom: 0;
+}
+
+.live-decisions-copy .section-heading {
+  grid-column: 1 / -1;
+  margin-bottom: 0;
+}
+
+.live-decisions-copy .section-copy {
+  grid-column: 1;
+  margin: 0;
+  align-self: end;
+}
+
+.live-decisions-copy .live-chain-counter {
+  grid-column: 2;
+  align-self: end;
+  white-space: nowrap;
+}
+
+@media (max-width: 680px) {
+  .live-decisions-copy {
+    grid-template-columns: 1fr;
+  }
+
+  .live-decisions-copy .section-copy,
+  .live-decisions-copy .live-chain-counter {
+    grid-column: 1;
+  }
+}
+
+/* ── 8. App topbar: overflow control on medium screens ──── */
+.app-topbar-center {
+  overflow: hidden;
+  flex-wrap: nowrap;
+  min-width: 0;
+}
+
+@media (max-width: 1100px) {
+  .cycle-topbar {
+    display: none;
+  }
+}
+
+@media (max-width: 1024px) {
+  .badge-devnet {
+    display: none;
+  }
+}
+
+@media (max-width: 960px) {
+  .risk-indicator {
+    display: none;
+  }
+}
+
+/* ── 9. Toast: clear mobile tab bar ──────────────────────── */
+@media (max-width: 768px) {
+  .toast-container {
+    left: 12px;
+    right: 12px;
+    bottom: 80px;
+  }
+
+  .toast {
+    min-width: 0;
+    max-width: 100%;
+  }
+}
+
+/* ── 10. Decision card: cursor + better hover ────────────── */
+.decision-card {
+  cursor: pointer;
+}
+
+/* ── 11. Feed body: proper scroll containment ────────────── */
+.feed-body {
+  overflow-y: auto;
+  overflow-x: hidden;
+  overscroll-behavior-y: contain;
+}
+
+/* ── 12. App column scrollbars: consistent thin style ──── */
+.app-col-left,
+.app-col-right {
+  scrollbar-width: thin;
+  scrollbar-color: rgba(130, 148, 170, 0.18) transparent;
+}
+
+.app-col-left::-webkit-scrollbar,
+.app-col-right::-webkit-scrollbar {
+  width: 4px;
+}
+
+.app-col-left::-webkit-scrollbar-thumb,
+.app-col-right::-webkit-scrollbar-thumb {
+  background: rgba(130, 148, 170, 0.2);
+  border-radius: 4px;
+}
+
+/* ── 13. Landing metric strip: better mobile layout ──────── */
+@media (max-width: 480px) {
+  .metric-strip {
+    grid-template-columns: 1fr 1fr;
+  }
+
+  .metric-tile {
+    min-height: 100px;
+    padding: 20px;
+  }
+
+  .metric-tile strong {
+    font-size: clamp(26px, 8vw, 42px);
+  }
+}
+
+/* ── 14. DW preview row: display as flex ─────────────────── */
+.dw-preview {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+/* ── 15. Vault stat box icon accessibility ───────────────── */
+.vault-stat-icon {
+  pointer-events: none;
+  aria-hidden: true;
+}
+
+/* ── 16. Improve deck card agent meter visibility ────────── */
+.dc-agent-meter {
+  display: block;
+  grid-column: 3 / 5;
+  height: 3px;
+  overflow: hidden;
+  border-radius: 999px;
+  background: rgba(130, 148, 170, 0.1);
+  margin-top: 4px;
+}
+
+.dc-agent-meter span {
+  display: block;
+  height: 100%;
+  border-radius: inherit;
+  background: linear-gradient(90deg, #7dd3c7, #d8ff66);
+}
+
+/* ── 17. Better section transitions on hover ─────────────── */
+.glass-panel,
+.proof-card,
+.live-decision-card,
+.vault-stat-box,
+.hiw-card {
+  will-change: transform;
+}
+
+/* ── 18. App column right: refined tablet layout ─────────── */
+/* At 820-1200px the right column auto-places in a new row
+   (app-grid becomes 2-col). Let it expand naturally.       */
+@media (max-width: 1200px) and (min-width: 821px) {
+  .app-col-right {
+    overflow-y: visible;
+    padding-bottom: 16px;
+  }
+}
+
+/* ── 19. Cinematic nav: scrolled state improvements ─────── */
+.cinematic-nav.is-scrolled .nav-hamburger {
+  min-height: 36px;
+  height: 36px;
+  width: 36px;
+}
+
+/* ── 20. Orbit cards: prevent layout shift ───────────────── */
+.orbit-card {
+  white-space: nowrap;
+}
+
+/* ── 21. Live decision link: button-like tap target ──────── */
+.live-decision-link {
+  min-height: 44px;
+}
+
+/* ── 22. Agent panel signal-row: better contrast ─────────── */
+.signal-row span {
+  font-weight: 700;
+  font-size: 14px;
+}
+
+.signal-row b {
+  font-size: 13px;
+  opacity: 0.85;
+}
+
+/* ── 23. Security rails: responsive ─────────────────────── */
+@media (max-width: 680px) {
+  .rail {
+    min-height: 100px;
+    font-size: clamp(18px, 5vw, 28px);
+    padding: 20px 22px;
+  }
+}
+
+/* ── 24. Footer: ensure no horizontal overflow ──────────── */
+.cinematic-page footer,
+.landing-footer {
+  overflow: hidden;
+}
+
+/* ── 25. Wallet adapter button: match design system ─────── */
+.wallet-adapter-button {
+  border-radius: var(--radius-md) !important;
+  min-height: 32px !important;
+}
+
+/* ── 26. Scrollbar: feed body thin chrome ───────────────── */
+.feed-body::-webkit-scrollbar {
+  width: 4px;
+}
+
+.feed-body::-webkit-scrollbar-thumb {
+  background: rgba(130, 148, 170, 0.18);
+  border-radius: 4px;
+}
+
+/* ── 27. Skip-to-main for keyboard users ─────────────────── */
+.skip-link {
+  position: absolute;
+  top: -100%;
+  left: 16px;
+  z-index: 9999;
+  padding: 10px 20px;
+  background: #dbff6c;
+  color: #07100a;
+  font-weight: 700;
+  border-radius: 8px;
+  text-decoration: none;
+  transition: top 200ms ease;
+}
+
+.skip-link:focus {
+  top: 16px;
+}
+
+/* ── 28. Pyth-unavailable muted style ─────────────────────── */
+.dc-pyth-unavailable {
+  opacity: 0.5;
+}
+
+/* ── 29. Decision card: real collapse behavior ─────────────── */
+/* max-height: 0 only clips content box with box-sizing:content-box,
+   so we must also collapse padding & borders to avoid ghost space. */
+.dc-agents,
+.dc-vote-breakdown,
+.dc-pyth-price {
+  max-height: 0;
+  overflow: hidden;
+  opacity: 0;
+  transition:
+    max-height 300ms cubic-bezier(0.22, 1, 0.36, 1),
+    opacity 220ms ease,
+    padding-top 300ms ease,
+    padding-bottom 300ms ease,
+    border-top-width 300ms ease,
+    border-bottom-width 300ms ease;
+}
+
+/* .dc-vote-breakdown has padding:12px 14px + border-top */
+.dc-vote-breakdown {
+  padding-top: 0;
+  padding-bottom: 0;
+  border-top-width: 0;
+}
+
+/* .dc-pyth-price has padding:10px 14px + border-top */
+.dc-pyth-price {
+  padding-top: 0;
+  padding-bottom: 0;
+  border-top-width: 0;
+}
+
+.decision-card.expanded .dc-agents,
+.decision-card.expanded .dc-vote-breakdown,
+.decision-card.expanded .dc-pyth-price {
+  max-height: 800px;
+  opacity: 1;
+}
+
+.decision-card.expanded .dc-vote-breakdown {
+  padding-top: 12px;
+  padding-bottom: 12px;
+  border-top-width: 1px;
+}
+
+.decision-card.expanded .dc-pyth-price {
+  padding-top: 10px;
+  padding-bottom: 10px;
+  border-top-width: 1px;
+}
+
+/* dc-footer is always visible */
+.dc-footer {
+  position: relative;
+  z-index: 1;
+}
+
+/* ═══════════════════════════════════════════════════════════
+   RIGHT COLUMN DESKTOP UX PASS
+   ─ Fix scrollability, header layout, panel polish
+   ═══════════════════════════════════════════════════════════ */
+
+/* ── R1. Force proper height model on desktop ────────────── */
+@media (min-width: 1201px) {
+  .app-layout {
+    display: flex;
+    flex-direction: column;
+    height: 100dvh;
+    overflow: hidden;
+  }
+
+  .app-grid {
+    flex: 1;
+    min-height: 0;
+    overflow: hidden;
+    /* Single row fills all available height so columns can scroll */
+    grid-template-rows: 1fr;
+    align-items: stretch;
+  }
+
+  .app-col-right {
+    display: flex;
+    flex-direction: column;
+    min-height: 0;
+    height: 100%;
+    overflow-y: auto;
+    overflow-x: hidden;
+    overscroll-behavior-y: contain;
+    padding: 20px 18px 40px;
+    gap: 14px;
+    scrollbar-width: thin;
+    scrollbar-color: rgba(216, 255, 102, 0.25) transparent;
+  }
+
+  .app-col-right::-webkit-scrollbar {
+    width: 4px;
+  }
+
+  .app-col-right::-webkit-scrollbar-thumb {
+    background: rgba(216, 255, 102, 0.22);
+    border-radius: 4px;
+  }
+
+  /* Left col: same height model */
+  .app-col-left {
+    min-height: 0;
+    height: 100%;
+    overflow-y: auto;
+    overflow-x: hidden;
+  }
+}
+
+/* ── R2. Equity header: title | source | toggle in one row ── */
+.equity-header {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: nowrap;
+  margin-bottom: 6px;
+}
+
+.equity-title {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+
+.equity-source {
+  flex: 1;
+  min-width: 0;
+  font-size: 10px;
+  color: var(--text-tertiary, #5e738a);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  opacity: 0.8;
+}
+
+.equity-toggle {
+  flex-shrink: 0;
+  margin-left: auto;
+}
+
+/* ── R3. Equity subtitle: compact one-liner ──────────────── */
+.equity-subtitle {
+  font-size: 10px;
+  color: var(--text-tertiary, #5e738a);
+  margin: 0 0 10px;
+  opacity: 0.7;
+}
+
+/* Demo badge in equity header */
+.equity-demo-badge {
+  font-family: var(--font-mono);
+  font-size: 9px;
+  font-weight: 700;
+  letter-spacing: 0.12em;
+  color: #fbbf24;
+  background: rgba(251, 191, 36, 0.1);
+  border: 1px solid rgba(251, 191, 36, 0.24);
+  border-radius: 5px;
+  padding: 2px 6px;
+  flex-shrink: 0;
+}
+
+/* Range picker — single button + dropdown */
+.equity-range-picker {
+  position: relative;
+  flex-shrink: 0;
+}
+
+.equity-range-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  height: 26px;
+  padding: 0 10px;
+  background: rgba(219, 255, 108, 0.06);
+  border: 1px solid rgba(219, 255, 108, 0.2);
+  border-radius: 7px;
+  color: #dbff6c;
+  font-family: var(--font-mono);
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  cursor: pointer;
+  transition: background 0.15s, border-color 0.15s;
+}
+
+.equity-range-btn:hover {
+  background: rgba(219, 255, 108, 0.12);
+  border-color: rgba(219, 255, 108, 0.35);
+}
+
+.equity-range-btn svg {
+  opacity: 0.7;
+  flex-shrink: 0;
+}
+
+.equity-range-drop {
+  position: absolute;
+  top: calc(100% + 6px);
+  right: 0;
+  min-width: 110px;
+  background: #0b1424;
+  border: 1px solid rgba(219, 255, 108, 0.16);
+  border-radius: 9px;
+  overflow: hidden;
+  box-shadow: 0 12px 40px rgba(0, 0, 0, 0.55);
+  z-index: 50;
+  animation: rangeDropIn 0.14s ease;
+}
+
+@keyframes rangeDropIn {
+  from { opacity: 0; transform: translateY(-4px) scale(0.97); }
+  to   { opacity: 1; transform: translateY(0)   scale(1);    }
+}
+
+.equity-range-opt {
+  display: block;
+  width: 100%;
+  padding: 8px 14px;
+  background: transparent;
+  border: none;
+  color: #8b9cbf;
+  font-family: var(--font-mono);
+  font-size: 11px;
+  text-align: left;
+  cursor: pointer;
+  transition: background 0.12s, color 0.12s;
+}
+
+.equity-range-opt:hover {
+  background: rgba(219, 255, 108, 0.07);
+  color: #e2e8f0;
+}
+
+.equity-range-opt.active {
+  color: #dbff6c;
+  background: rgba(219, 255, 108, 0.08);
+}
+
+/* ── R4. Equity chart: good height, not oversized ────────── */
+.equity-chart-wrap {
+  height: 158px;
+}
+
+/* ── R5. Equity panel: compact padding ───────────────────── */
+.equity-panel {
+  padding: 14px 16px 10px;
+  min-height: unset;
+  flex-shrink: 0;
+}
+
+/* ── R6. Strategy orders: compact reasoning text ─────────── */
+.strategy-order-row p {
+  font-size: 11px;
+  line-height: 1.45;
+  color: var(--text-tertiary, #5e738a);
+  margin-top: 8px;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+.strategy-orders-panel {
+  flex-shrink: 0;
+}
+
+/* ── R7. Performance chart: visible tick labels ──────────── */
+.performance-panel {
+  flex-shrink: 0;
+  min-height: unset;
+}
+
+.performance-chart-wrap {
+  height: 140px;
+}
+
+/* ── R8. Earnings panel: compact, no wasted space ────────── */
+/* Original has flex:1 (flex-basis:0%) which collapses when column is height-
+   constrained. Override to flex:0 0 auto so it always shows its content. */
+.earnings-panel {
+  flex: 0 0 auto;
+  padding: 14px 16px;
+}
+
+.earnings-big {
+  font-size: clamp(28px, 2.8vw, 40px);
+  line-height: 1.1;
+}
+
+.earnings-sub {
+  font-size: 11px;
+  margin-top: 2px;
+  margin-bottom: 12px;
+}
+
+.earnings-row {
+  padding: 8px 0;
+}
+
+.cycle-block {
+  margin-top: 14px;
+}
+
+.agent-online {
+  margin-top: 12px;
+  padding: 8px 12px;
+}
+
+/* ── R9. All right-col panels: consistent border-radius ──── */
+@media (min-width: 1201px) {
+  .app-col-right .equity-panel,
+  .app-col-right .strategy-orders-panel,
+  .app-col-right .performance-panel,
+  .app-col-right .earnings-panel {
+    border-radius: 12px;
+    background: #080e17;
+    border: 1px solid rgba(130, 148, 170, 0.15);
+  }
+}
+
+/* ═══════════════════════════════════════════════════════════
+   LEFT COLUMN DESKTOP UX PASS  (@media min-width: 1201px)
+   ═══════════════════════════════════════════════════════════ */
+@media (min-width: 1201px) {
+  /* ── L1. Left column: scroll model + padding ─────────── */
+  .app-col-left {
+    display: flex;
+    flex-direction: column;
+    gap: 14px;
+    min-height: 0;
+    height: 100%;
+    overflow-y: auto;
+    overflow-x: hidden;
+    overscroll-behavior-y: contain;
+    padding: 20px 18px 40px;
+    scrollbar-width: thin;
+    scrollbar-color: rgba(130, 148, 170, 0.18) transparent;
+  }
+
+  .app-col-left::-webkit-scrollbar { width: 4px; }
+  .app-col-left::-webkit-scrollbar-thumb {
+    background: rgba(130, 148, 170, 0.2);
+    border-radius: 4px;
+  }
+
+  .mobile-trade,
+  .mobile-vault {
+    gap: 14px;
+  }
+
+  /* ── L2. Vault stats panel: compact header + grid ─────── */
+  .vault-stats-panel {
+    flex-shrink: 0;
+    padding: 0 0 12px;
+  }
+
+  .vault-stats-panel .panel-title-row {
+    padding: 13px 14px 11px;
+  }
+
+  /* Active badge: pulsing dot */
+  .vault-stats-panel .panel-title-row strong::before {
+    content: '●';
+    margin-right: 5px;
+    font-size: 7px;
+    vertical-align: 1px;
+    color: #dbff6c;
+    opacity: 0.85;
+  }
+
+  .vault-stats-grid {
+    padding: 0 12px;
+    gap: 8px;
+  }
+
+  /* ── L3. Stat boxes: compact + accent top-line ────────── */
+  .vault-stat-box {
+    position: relative;
+    min-height: unset;
+    padding: 11px 12px 13px;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+    border-radius: 10px;
+  }
+
+  /* Emerald-tinted gradient accent at box top */
+  .vault-stat-box::before {
+    content: '';
+    position: absolute;
+    top: 0; left: 0; right: 0;
+    height: 1px;
+    background: linear-gradient(
+      90deg,
+      rgba(219, 255, 108, 0.55) 0%,
+      transparent 65%
+    );
+  }
+
+  .vault-stat-box:hover {
+    border-color: rgba(130, 148, 170, 0.3);
+    transform: none;
+  }
+
+  /* Icon: small pill badge in top-right */
+  .vault-stat-icon {
+    position: absolute;
+    top: 10px;
+    right: 10px;
+    padding: 5px;
+    background: rgba(125, 211, 199, 0.1);
+    border-radius: 7px;
+    color: rgba(125, 211, 199, 0.88);
+    box-sizing: content-box;
+  }
+
+  .vault-stat-label {
+    font-size: 9px;
+    letter-spacing: 0.12em;
+    margin-bottom: 0;
+    padding-right: 30px; /* avoid icon overlap */
+  }
+
+  .vault-stat-value {
+    margin-top: 8px;
+    font-size: clamp(16px, 1.4vw, 20px);
+    letter-spacing: -0.03em;
+    line-height: 1.15;
+  }
+
+  .vault-stat-sub {
+    margin-top: 3px;
+    font-size: 10px;
+    line-height: 1.35;
+  }
+
+  /* ── L4. Deposit panel: compact + cleaner form ─────────── */
+  .deposit-panel {
+    flex-shrink: 0;
+  }
+
+  .trade-ticket-header {
+    padding: 13px 14px 11px;
+    border-bottom: 1px solid rgba(130, 148, 170, 0.1);
+  }
+
+  /* Lock icon accent */
+  .trade-ticket-header > svg {
+    color: rgba(125, 211, 199, 0.7);
+  }
+
+  /* Tabs: pill-style inside a container */
+  .dw-tabs {
+    padding: 8px 10px;
+    gap: 6px;
+    border-bottom: 1px solid rgba(130, 148, 170, 0.08);
+  }
+
+  .dw-tab {
+    min-height: 34px;
+    border-radius: 8px;
+    font-size: 12px;
+    gap: 6px;
+    padding: 6px 10px;
+    letter-spacing: 0.02em;
+  }
+
+  .dw-tab.active {
+    background: rgba(219, 255, 108, 0.1);
+    border-color: rgba(219, 255, 108, 0.24);
+    color: #dbff6c;
+  }
+
+  .dw-body {
+    padding: 12px 14px 14px;
+    gap: 9px;
+  }
+
+  .dw-input-label {
+    font-size: 10px;
+    letter-spacing: 0.1em;
+  }
+
+  .dw-input-wrap {
+    min-height: unset;
+    border-radius: 10px;
+    border-color: rgba(130, 148, 170, 0.16);
+  }
+
+  .dw-input {
+    padding: 10px 12px;
+    font-size: 20px;
+  }
+
+  .dw-input-suffix {
+    padding: 10px 12px;
+    font-size: 11px;
+    min-width: 54px;
+  }
+
+  .dw-preview {
+    padding: 9px 12px;
+    border-radius: 8px;
+    background: rgba(130, 148, 170, 0.05);
+    border: 1px solid rgba(130, 148, 170, 0.1);
+  }
+
+  .dw-preview span {
+    font-size: 11px;
+    color: #5e738a;
+  }
+
+  .dw-preview strong {
+    font-size: 11px;
+    color: #c8d4e4;
+  }
+
+  .dw-submit {
+    height: 40px;
+    border-radius: 8px;
+    font-size: 13px;
+    letter-spacing: 0.03em;
+  }
+
+  /* ── L5. Position panel: compact empty state ─────────── */
+  .position-panel {
+    flex-shrink: 0;
+  }
+
+  .app-col-left .panel-header {
+    padding: 13px 14px 0;
+  }
+
+  .position-flat {
+    min-height: unset;
+    padding: 12px 18px 18px;
+    gap: 5px;
+  }
+
+  .position-flat-orbit {
+    width: 50px;
+    height: 50px;
+    margin-bottom: 8px;
+    box-shadow: 0 0 24px rgba(37, 208, 189, 0.08);
+  }
+
+  .position-flat-text {
+    font-size: 13px;
+  }
+
+  .position-flat-sub {
+    font-size: 11px;
+    margin-top: 4px;
+  }
+
+  /* ── L6. Left-col panels: consistent styling ─────────── */
+  .app-col-left .vault-stats-panel,
+  .app-col-left .deposit-panel,
+  .app-col-left .position-panel {
+    border-radius: 12px;
+    background: #080e17;
+    border: 1px solid rgba(130, 148, 170, 0.15);
+    box-shadow: none;
+    backdrop-filter: none;
+  }
+}
+
+/* ═══════════════════════════════════════════════════════════
+   APP TOPBAR DESKTOP UX PASS  (@media min-width: 1201px)
+   ═══════════════════════════════════════════════════════════ */
+@media (min-width: 1201px) {
+  /* ── T1. Topbar shell ────────────────────────────────── */
+  .app-topbar {
+    height: 64px;
+    padding: 0 24px;
+    background: #050910;
+    border-bottom: 1px solid rgba(130, 148, 170, 0.14);
+    gap: 0;
+  }
+
+  /* ── T2. Logo ────────────────────────────────────────── */
+  .app-topbar-logo {
+    font-size: 14px;
+    letter-spacing: 0.28em;
+    color: #e2e8f0;
+    flex-shrink: 0;
+  }
+
+  /* ── T3. Section dividers ────────────────────────────── */
+  .topbar-divider {
+    width: 1px;
+    height: 18px;
+    background: rgba(130, 148, 170, 0.18);
+    margin: 0 20px;
+    flex-shrink: 0;
+  }
+
+  /* ── T4. Market pill: padding + consistent height ─────── */
+  .topbar-market {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    height: 34px;
+    padding: 0 12px;
+    border-radius: 8px;
+    background: #090f19;
+    border: 1px solid rgba(130, 148, 170, 0.18);
+  }
+
+  .topbar-market-pair {
+    font-size: 11px;
+    font-weight: 600;
+    color: #6b7fa0;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+  }
+
+  .topbar-market-price {
+    font-size: 13px;
+    font-weight: 700;
+    color: #e2e8f0;
+    letter-spacing: -0.02em;
+  }
+
+  .topbar-pill {
+    font-size: 10px;
+    padding: 2px 7px;
+    border-radius: 5px;
+    letter-spacing: 0.02em;
+  }
+
+  /* ── T5. Center section ──────────────────────────────── */
+  .app-topbar-center {
+    flex: 1;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    overflow: visible;
+  }
+
+  /* Shared pill base for ALL center items */
+  .live-indicator,
+  .risk-indicator,
+  .cycle-topbar {
+    display: inline-flex;
+    align-items: center;
+    height: 32px;
+    padding: 0 12px;
+    border-radius: 8px;
+    font-family: var(--font-mono);
+    font-size: 11px;
+    font-weight: 600;
+    letter-spacing: 0.08em;
+    white-space: nowrap;
+  }
+
+  /* live-indicator: emerald tinted */
+  .live-indicator {
+    gap: 7px;
+    color: #dbff6c;
+    background: rgba(219, 255, 108, 0.08);
+    border: 1px solid rgba(219, 255, 108, 0.26);
+    text-transform: uppercase;
+    border-radius: 8px;
+  }
+
+  .live-dot {
+    width: 6px;
+    height: 6px;
+    flex-shrink: 0;
+  }
+
+  /* risk-indicator: neutral pill */
+  .risk-indicator {
+    color: #8b9cbf;
+    background: #090f19;
+    border: 1px solid rgba(130, 148, 170, 0.18);
+    border-radius: 8px;
+    font-weight: 600;
+  }
+
+  /* cycle-topbar: same pill, replaces bare text */
+  .cycle-topbar {
+    margin-left: 0;
+    color: #7a8fa8;
+    background: #090f19;
+    border: 1px solid rgba(130, 148, 170, 0.16);
+    font-weight: 500;
+    letter-spacing: 0.05em;
+  }
+
+  .cycle-topbar.thinking {
+    color: #fbbf24;
+    background: rgba(251, 191, 36, 0.06);
+    border-color: rgba(251, 191, 36, 0.22);
+  }
+
+  /* ── T6. Right section ──────────────────────────────── */
+  .app-topbar-right {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-left: auto;
+    flex-shrink: 0;
+  }
+
+  /* Thin vertical divider before right section */
+  .app-topbar-right::before {
+    content: '';
+    width: 1px;
+    height: 18px;
+    background: rgba(130, 148, 170, 0.18);
+    margin-right: 4px;
+    flex-shrink: 0;
+    align-self: center;
+  }
+
+  /* priority-fee: consistent pill */
+  .priority-fee {
+    display: inline-flex;
+    align-items: center;
+    height: 32px;
+    padding: 0 12px;
+    gap: 6px;
+    background: #090f19;
+    border: 1px solid rgba(130, 148, 170, 0.18);
+    border-radius: 8px;
+    font-family: var(--font-mono);
+    font-size: 11px;
+    color: #7a8fa8;
+    min-height: unset;
+  }
+
+  .priority-fee .label {
+    color: #5e738a;
+  }
+
+  .priority-fee select {
+    background: transparent;
+    border: 0;
+    outline: 0;
+    font: inherit;
+    color: #dbff6c;
+    font-size: 11px;
+    cursor: pointer;
+    letter-spacing: 0.06em;
+  }
+
+  /* pyth/rpc status pills */
+  .pyth-status {
+    display: inline-flex;
+    align-items: center;
+    height: 32px;
+    padding: 0 10px;
+    gap: 6px;
+    background: #090f19;
+    border: 1px solid rgba(130, 148, 170, 0.16);
+    border-radius: 8px;
+    font-family: var(--font-mono);
+    font-size: 11px;
+    color: #7a8fa8;
+    white-space: nowrap;
+    min-height: unset;
+  }
+
+  .pyth-status .green { color: #4ade80; }
+  .pyth-status .red   { color: #f87171; }
+
+  /* devnet badge */
+  .badge-devnet {
+    display: inline-flex;
+    align-items: center;
+    height: 32px;
+    padding: 0 10px;
+    border-radius: 8px;
+    font-family: var(--font-mono);
+    font-size: 10px;
+    font-weight: 700;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    color: #fbbf24;
+    background: rgba(251, 191, 36, 0.08);
+    border: 1px solid rgba(251, 191, 36, 0.24);
+    min-height: unset;
+  }
+}
+
+/* ── Custom priority fee dropdown ───────────────────────── */
+.priority-fee {
+  position: relative;
+}
+
+.fee-value {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  background: transparent;
+  border: 0;
+  padding: 0;
+  font-family: var(--font-mono);
+  font-size: 11px;
+  font-weight: 700;
+  color: #dbff6c;
+  cursor: pointer;
+  letter-spacing: 0.08em;
+  line-height: 1;
+  transition: opacity 150ms ease;
+}
+
+.fee-value:hover { opacity: 0.75; }
+
+.fee-value svg {
+  transition: transform 200ms ease;
+  flex-shrink: 0;
+}
+
+.fee-value[aria-expanded="true"] svg {
+  transform: rotate(180deg);
+}
+
+.fee-dropdown {
+  position: absolute;
+  top: calc(100% + 10px);
+  right: -12px;
+  min-width: 130px;
+  background: #080e17;
+  border: 1px solid rgba(130, 148, 170, 0.2);
+  border-radius: 10px;
+  padding: 4px;
+  z-index: 600;
+  box-shadow: 0 16px 48px rgba(0, 0, 0, 0.5), 0 0 0 1px rgba(219, 255, 108, 0.06);
+  animation: feeDropIn 130ms ease;
+}
+
+@keyframes feeDropIn {
+  from { opacity: 0; transform: translateY(-6px) scale(0.97); }
+  to   { opacity: 1; transform: translateY(0)   scale(1);    }
+}
+
+.fee-option {
+  display: flex;
+  align-items: center;
+  width: 100%;
+  padding: 8px 12px;
+  background: transparent;
+  border: 0;
+  border-radius: 7px;
+  font-family: var(--font-mono);
+  font-size: 11px;
+  font-weight: 600;
+  color: #7a8fa8;
+  cursor: pointer;
+  letter-spacing: 0.1em;
+  text-align: left;
+  transition: background 120ms ease, color 120ms ease;
+}
+
+.fee-option:hover {
+  background: rgba(130, 148, 170, 0.08);
+  color: #c8d4e4;
+}
+
+.fee-option.active {
+  color: #dbff6c;
+  background: rgba(219, 255, 108, 0.08);
+}
+
+.fee-option.active::before {
+  content: '●';
+  margin-right: 7px;
+  font-size: 6px;
+  vertical-align: 1px;
+  color: #dbff6c;
+}
+
+/* ═══════════════════════════════════════════════════════════
+   FINAL PREMIUM PRODUCT POLISH PASS
+   ─ Micro-interactions, button/card states, spacing rhythm,
+     dashboard readability, loading states, mobile, timing
+   ═══════════════════════════════════════════════════════════ */
+
+/* ── P1. Button Press Feedback ───────────────────────────── */
+/* Primary CTA: tactile press-down on click */
+.btn-primary:active,
+.nav-cta:active,
+.nav-pill:active,
+.primary-orbit:active,
+.dw-submit.primary:active:not(:disabled),
+.mobile-nav-launch:active,
+.final-btn:active {
+  transform: translateY(1px) scale(0.98);
+  box-shadow: none;
+  transition: transform 60ms ease, box-shadow 60ms ease;
+}
+
+/* Ghost/secondary buttons: subtle press */
+.btn-secondary:active,
+.ghost-orbit:active,
+.proof-actions a:active {
+  transform: translateY(1px) scale(0.98);
+  transition: transform 60ms ease;
+}
+
+/* Tab buttons: micro-bounce on press */
+.dw-tab:active {
+  transform: scale(0.96);
+  transition: transform 50ms ease;
+}
+
+/* Mobile tabbar buttons: press feedback */
+.mobile-tabbar button:active {
+  transform: scale(0.92);
+  transition: transform 50ms ease;
+}
+
+/* Equity toggle buttons: press feedback */
+.equity-toggle-btn:active {
+  transform: scale(0.95);
+  transition: transform 50ms ease;
+}
+
+/* MAX button: press */
+.dw-max-btn:active {
+  transform: scale(0.94);
+  transition: transform 40ms ease;
+}
+
+/* ── P2. Card Hover Glow & Border Polish ─────────────────── */
+/* Decision cards: subtle emerald glow on hover */
+.decision-card:hover {
+  box-shadow: 0 0 0 1px rgba(219, 255, 108, 0.08), 0 8px 32px rgba(0, 0, 0, 0.18);
+}
+
+/* Vault stat boxes: inner light shift on hover */
+.vault-stat-box {
+  transition: border-color 200ms ease, box-shadow 200ms ease;
+}
+
+.vault-stat-box:hover {
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.04), 0 4px 20px rgba(0, 0, 0, 0.12);
+}
+
+/* Landing glass panels: refined hover glow */
+.glass-panel {
+  transition: transform 280ms cubic-bezier(0.22, 1, 0.36, 1), border-color 280ms ease, box-shadow 280ms ease;
+}
+
+.glass-panel:hover {
+  box-shadow: 0 28px 80px rgba(0, 0, 0, 0.5), inset 0 1px 0 rgba(255, 255, 255, 0.08), 0 0 0 1px rgba(219, 255, 108, 0.12);
+}
+
+/* Proof cards: gentle lift + glow on hover */
+.proof-card {
+  transition: transform 240ms cubic-bezier(0.22, 1, 0.36, 1), border-color 240ms ease, box-shadow 240ms ease;
+}
+
+.proof-card:hover {
+  border-color: rgba(219, 255, 108, 0.18);
+  box-shadow: 0 28px 80px rgba(0, 0, 0, 0.5), inset 0 1px 0 rgba(255, 255, 255, 0.06), 0 0 24px rgba(37, 208, 189, 0.06);
+}
+
+/* Security rails: hover lift */
+.rail {
+  transition: transform 240ms cubic-bezier(0.22, 1, 0.36, 1), border-color 240ms ease;
+}
+
+.rail:hover {
+  transform: translateY(-3px);
+  border-color: rgba(219, 255, 108, 0.16);
+}
+
+/* Live decision cards: border glow refined */
+.live-decision-card {
+  transition: transform 220ms cubic-bezier(0.22, 1, 0.36, 1), border-color 220ms ease, box-shadow 220ms ease;
+}
+
+.live-decision-card:hover {
+  box-shadow: 0 22px 60px rgba(0, 0, 0, 0.38), 0 0 0 1px rgba(219, 255, 108, 0.1);
+}
+
+/* System cards: hover glow */
+.system-card {
+  transition: transform 220ms cubic-bezier(0.22, 1, 0.36, 1), border-color 220ms ease, box-shadow 220ms ease;
+}
+
+.system-card:hover {
+  box-shadow: 0 24px 64px rgba(0, 0, 0, 0.36), inset 0 1px 0 rgba(255, 255, 255, 0.05);
+}
+
+/* ── P3. Toast Refinements ───────────────────────────────── */
+/* Smoother entrance + exit-ready */
+.toast {
+  box-shadow: 0 12px 40px rgba(0, 0, 0, 0.45), 0 0 0 1px rgba(130, 148, 170, 0.08);
+  animation: toast-enter 340ms cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+/* Toast auto-dismiss progress bar */
+.toast::after {
+  content: '';
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  height: 2px;
+  background: rgba(219, 255, 108, 0.35);
+  animation: toast-countdown 5s linear forwards;
+  border-radius: 0 0 var(--radius-md) var(--radius-md);
+}
+
+.toast.success::after { background: rgba(219, 255, 108, 0.4); }
+.toast.error::after { background: rgba(255, 51, 88, 0.4); }
+.toast.info::after { background: rgba(59, 130, 246, 0.4); }
+
+@keyframes toast-countdown {
+  from { width: 100%; }
+  to { width: 0%; }
+}
+
+/* Toast close button: better hover */
+.toast-close {
+  transition: color 120ms ease, background 120ms ease, transform 120ms ease;
+}
+
+.toast-close:hover {
+  transform: scale(1.1);
+}
+
+/* ── P4. Loading & Empty State Polish ────────────────────── */
+/* Feed empty state: refined pulsing icon */
+.feed-empty {
+  min-height: 320px;
+  gap: 14px;
+}
+
+.feed-empty::before {
+  content: '';
+  width: 56px;
+  height: 56px;
+  border-radius: 50%;
+  background: rgba(37, 208, 189, 0.06);
+  border: 1px solid rgba(37, 208, 189, 0.14);
+  animation: breathe 3s ease-in-out infinite;
+  margin-bottom: 4px;
+}
+
+.feed-empty-main {
+  font-size: 12px;
+  letter-spacing: 0.14em;
+}
+
+.feed-empty-sub {
+  font-size: 13px;
+  color: #5e738a;
+  max-width: 240px;
+  text-align: center;
+  line-height: 1.5;
+}
+
+/* Live decision empty: shimmer loading */
+.live-decision-empty {
+  position: relative;
+  overflow: hidden;
+  font-size: 14px;
+  letter-spacing: 0.04em;
+}
+
+.live-decision-empty::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(
+    90deg,
+    transparent 0%,
+    rgba(219, 255, 108, 0.03) 45%,
+    rgba(219, 255, 108, 0.06) 50%,
+    rgba(219, 255, 108, 0.03) 55%,
+    transparent 100%
+  );
+  background-size: 200% 100%;
+  animation: empty-shimmer 2.4s ease-in-out infinite;
+}
+
+@keyframes empty-shimmer {
+  0% { background-position: 200% 0; }
+  100% { background-position: -200% 0; }
+}
+
+/* Position flat state: cleaner */
+.position-flat-dash {
+  transition: opacity 300ms ease;
+}
+
+/* Skeleton: smoother shimmer */
+.skeleton {
+  background: linear-gradient(
+    90deg,
+    #080e17 25%,
+    #0e1622 38%,
+    #0e1622 42%,
+    #080e17 55%
+  );
+  background-size: 600px 100%;
+  animation: shimmer 2s ease-in-out infinite;
+  border-radius: 6px;
+}
+
+/* ── P5. Section Spacing Rhythm ──────────────────────────── */
+/* Tighten landing section breathing for better visual rhythm */
+.story-section,
+.wide-product,
+.proof-section,
+.security-section {
+  padding-top: 120px;
+  padding-bottom: 120px;
+}
+
+/* Live decisions section: balanced top/bottom */
+.live-decisions-section {
+  padding-top: 100px;
+  padding-bottom: 130px;
+}
+
+/* Final CTA: more breathing room */
+.final-cinema {
+  padding-top: 140px;
+  padding-bottom: 140px;
+  min-height: 68vh;
+}
+
+/* Metric strip: better separation */
+.metric-strip {
+  margin-bottom: 0;
+}
+
+/* Section kicker + heading: consistent vertical rhythm */
+.section-kicker {
+  margin-bottom: 18px;
+}
+
+.section-heading {
+  margin-bottom: 48px;
+}
+
+/* ── P6. Dashboard Readability ───────────────────────────── */
+/* Vault stat label: slightly warmer for better legibility */
+.vault-stat-label {
+  font-weight: 600;
+  line-height: 1.3;
+}
+
+/* Vault stat value: tabular figures for alignment */
+.vault-stat-value {
+  font-feature-settings: 'tnum' 1;
+}
+
+/* Earnings big number: tabular figures */
+.earnings-big {
+  font-feature-settings: 'tnum' 1;
+}
+
+/* Stats bar: tabular */
+.stats-bar-value {
+  font-feature-settings: 'tnum' 1;
+}
+
+/* Topbar market price: tabular for SOL price ticker */
+.topbar-market-price {
+  font-feature-settings: 'tnum' 1;
+}
+
+/* Decision card header items: ensure mono alignment */
+.dc-leverage,
+.dc-conf,
+.dc-time,
+.dc-agent-conf {
+  font-feature-settings: 'tnum' 1;
+}
+
+/* Earnings rows: better readability */
+.earnings-row-label {
+  font-weight: 500;
+}
+
+/* ── P7. Copy Hierarchy ──────────────────────────────────── */
+/* Landing hero sub-copy: wider max-width, softer line height */
+.cinema-hero p {
+  line-height: 1.65;
+}
+
+/* Section copy: consistent line height */
+.section-copy {
+  line-height: 1.65;
+}
+
+/* Agent panel descriptions: readable */
+.glass-panel p {
+  line-height: 1.6;
+  font-size: 14px;
+}
+
+/* Decision card reasoning: better readability */
+.dc-agent-reasoning {
+  line-height: 1.5;
+}
+
+/* Proof line code: better word spacing */
+.dc-proof-line code {
+  line-height: 1.4;
+  letter-spacing: 0.01em;
+}
+
+/* ── P8. Mobile Polish ───────────────────────────────────── */
+/* Mobile tabbar: refined appearance */
+@media (max-width: 768px) {
+  .mobile-tabbar {
+    height: 64px;
+    background: rgba(5, 9, 16, 0.96);
+    border-top-color: rgba(130, 148, 170, 0.12);
+  }
+
+  .mobile-tabbar button {
+    font-size: 10px;
+    letter-spacing: 0.04em;
+    gap: 4px;
+    transition: color 150ms ease, transform 150ms ease;
+  }
+
+  .mobile-tabbar button.active {
+    border-bottom-width: 2px;
+  }
+
+  .mobile-tabbar button svg {
+    transition: transform 150ms ease;
+  }
+
+  .mobile-tabbar button.active svg {
+    transform: translateY(-1px);
+  }
+
+  /* Mobile panels: better spacing */
+  .mobile-panel.active {
+    gap: 12px;
+    padding: 12px;
+  }
+
+  /* Mobile hero: adjust CTA button spacing */
+  .hero-actions {
+    gap: 12px;
+  }
+
+  /* Mobile nav overlay: smoother transition */
+  .mobile-nav-overlay {
+    transition: opacity 320ms cubic-bezier(0.22, 1, 0.36, 1), transform 320ms cubic-bezier(0.22, 1, 0.36, 1);
+  }
+
+  .mobile-nav-overlay a {
+    transition: color 180ms ease, padding-left 240ms cubic-bezier(0.22, 1, 0.36, 1);
+  }
+
+  /* Toast: better mobile spacing */
+  .toast-container {
+    bottom: 76px;
+    left: 14px;
+    right: 14px;
+  }
+
+  .toast {
+    padding: 12px 16px;
+    padding-right: 34px;
+  }
+}
+
+/* Small phones: extra compact */
+@media (max-width: 380px) {
+  .kinetic-title,
+  .cinema-hero h1 {
+    font-size: clamp(36px, 12vw, 56px);
+  }
+
+  .primary-orbit,
+  .ghost-orbit {
+    min-height: 52px;
+    font-size: 15px;
+  }
+}
+
+/* ── P9. Subtle Animation Timing ─────────────────────────── */
+/* Smoother pulse dot */
+@keyframes pulse-dot {
+  0%, 100% { opacity: 1; transform: scale(1); }
+  50% { opacity: 0.35; transform: scale(1.35); }
+}
+
+/* Smoother breathing animation */
+@keyframes breathe {
+  0%, 100% { opacity: 0.25; }
+  50% { opacity: 0.55; }
+}
+
+/* Decision card slide-in: smoother easing */
+@keyframes slide-in-top {
+  from {
+    opacity: 0;
+    transform: translateY(-12px);
+    filter: blur(4px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+    filter: blur(0px);
+  }
+}
+
+/* Toast entrance: spring-like */
+@keyframes toast-enter {
+  0% {
+    opacity: 0;
+    transform: translateX(80px) scale(0.96);
+  }
+  100% {
+    opacity: 1;
+    transform: translateX(0) scale(1);
+  }
+}
+
+/* Orbit card float: smoother */
+@keyframes float-card {
+  0%, 100% { transform: translate3d(0, 0, 0) scale(1); }
+  50% { transform: translate3d(0, -16px, 0) scale(1.01); }
+}
+
+/* ── P10. Visual Rhythm — Transition Defaults ────────────── */
+/* Unified transition easing for interactive elements */
+a,
+button,
+[role="button"] {
+  transition-timing-function: cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+/* Nav links: smoother color transitions */
+.cinematic-nav nav a {
+  transition: color 200ms ease, transform 200ms cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+/* Landing nav link underline: slightly slower reveal */
+.cinematic-nav nav a::after {
+  transition: width 260ms cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+/* Feed countdown: smooth rotation hint */
+.feed-countdown svg {
+  transition: transform 300ms cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+.feed-countdown:hover svg {
+  transform: rotate(-180deg);
+}
+
+/* Wallet button: consistent hover */
+.wallet-adapter-button {
+  transition: all 200ms cubic-bezier(0.22, 1, 0.36, 1) !important;
+}
+
+.wallet-adapter-button:not([disabled]):hover {
+  transform: translateY(-1px) !important;
+  box-shadow: 0 0 0 1px rgba(219, 255, 108, 0.12), 0 4px 16px rgba(0, 0, 0, 0.18) !important;
+}
+
+.wallet-adapter-button:not([disabled]):active {
+  transform: translateY(0) scale(0.98) !important;
+  box-shadow: none !important;
+}
+
+/* ── P11. Deposit Panel Polish ───────────────────────────── */
+/* Input focus: smoother glow ring */
+.dw-input-wrap {
+  transition: border-color 200ms ease, box-shadow 200ms ease;
+}
+
+.dw-input-wrap:focus-within {
+  border-color: rgba(219, 255, 108, 0.4);
+  box-shadow: 0 0 0 3px rgba(219, 255, 108, 0.08), 0 0 16px rgba(219, 255, 108, 0.04);
+}
+
+/* Submit button: smoother hover glow */
+.dw-submit.primary:not(:disabled) {
+  transition: background 180ms ease, transform 180ms cubic-bezier(0.22, 1, 0.36, 1), box-shadow 180ms ease;
+}
+
+.dw-submit.primary:not(:disabled):hover {
+  box-shadow: 0 8px 28px rgba(219, 255, 108, 0.18);
+}
+
+/* Ghost submit: subtle hover */
+.dw-submit.ghost {
+  transition: background 200ms ease, border-color 200ms ease;
+}
+
+/* ── P12. Landing Scroll Indicator ───────────────────────── */
+/* Subtle scroll-down hint at hero bottom */
+.cinema-hero::after {
+  content: '';
+  position: absolute;
+  bottom: 32px;
+  left: 50%;
+  width: 20px;
+  height: 32px;
+  border: 1.5px solid rgba(226, 232, 240, 0.18);
+  border-radius: 12px;
+  transform: translateX(-50%);
+  animation: scroll-hint 2.8s ease-in-out infinite;
+}
+
+.cinema-hero::before {
+  content: '';
+  position: absolute;
+  bottom: 40px;
+  left: 50%;
+  width: 3px;
+  height: 8px;
+  background: rgba(219, 255, 108, 0.45);
+  border-radius: 3px;
+  transform: translateX(-50%);
+  animation: scroll-dot 2.8s ease-in-out infinite;
+  z-index: 1;
+}
+
+@keyframes scroll-hint {
+  0%, 100% { opacity: 0.4; }
+  50% { opacity: 0.15; }
+}
+
+@keyframes scroll-dot {
+  0%, 100% { transform: translateX(-50%) translateY(0); opacity: 0.7; }
+  50% { transform: translateX(-50%) translateY(10px); opacity: 0.2; }
+}
+
+/* Hide scroll indicator on small screens where it overlaps content */
+@media (max-width: 680px) {
+  .cinema-hero::after,
+  .cinema-hero::before {
+    display: none;
+  }
+}
+
+/* ── P13. Decision Card Expand Arrow Polish ──────────────── */
+.dc-expand-icon {
+  transition: transform 200ms cubic-bezier(0.22, 1, 0.36, 1), color 200ms ease;
+}
+
+.decision-card:hover .dc-expand-icon {
+  color: #8b9cbf;
+}
+
+.decision-card.expanded .dc-expand-icon {
+  color: #dbff6c;
+}
+
+/* ── P14. Topbar Flash Animation ─────────────────────────── */
+/* Price change flash: cleaner pulse */
+.topbar-market.flash-up {
+  animation: price-flash-up 450ms ease;
+}
+
+.topbar-market.flash-down {
+  animation: price-flash-down 450ms ease;
+}
+
+@keyframes price-flash-up {
+  0%, 100% { background: #090f19; }
+  30% { background: rgba(219, 255, 108, 0.08); }
+}
+
+@keyframes price-flash-down {
+  0%, 100% { background: #090f19; }
+  30% { background: rgba(255, 51, 88, 0.06); }
+}
+
+/* ── P15. Cycle Progress Bar Polish ──────────────────────── */
+.cycle-fill {
+  transition: width 1s linear;
+  position: relative;
+}
+
+.cycle-fill::after {
+  content: '';
+  position: absolute;
+  right: 0;
+  top: -1px;
+  bottom: -1px;
+  width: 8px;
+  border-radius: 50%;
+  background: #d8ff66;
+  box-shadow: 0 0 8px rgba(216, 255, 102, 0.5);
+}
+
+/* ── P16. Improved Hover States for HowItWorks Cards ─────── */
+.hiw-card {
+  transition: transform 260ms cubic-bezier(0.22, 1, 0.36, 1), border-color 260ms ease, box-shadow 260ms ease;
+}
+
+.hiw-card:hover {
+  box-shadow: 0 16px 48px rgba(0, 0, 0, 0.3);
+}
+
+/* ── P17. Final CTA Section Polish ───────────────────────── */
+.final-cinema h2 {
+  background: linear-gradient(95deg, #fff 0%, #fff 42%, #dbff6c 56%, #b8f4ff 72%, #fff 100%);
+  background-size: 200% 100%;
+  -webkit-background-clip: text;
+  background-clip: text;
+  -webkit-text-fill-color: transparent;
+  animation: final-shimmer 6s ease-in-out infinite;
+}
+
+@keyframes final-shimmer {
+  0%, 100% { background-position: 0% 50%; }
+  50% { background-position: 100% 50%; }
+}
+
+/* ── P18. Agent Card Refinements ─────────────────────────── */
+/* Agent panel index number: subtle glow */
+.panel-index {
+  transition: background 200ms ease, box-shadow 200ms ease;
+}
+
+.glass-panel:hover .panel-index {
+  background: rgba(219, 255, 108, 0.14);
+  box-shadow: 0 0 20px rgba(219, 255, 108, 0.08);
+}
+
+/* Signal row: hover effect */
+.signal-row {
+  transition: background 200ms ease;
+}
+
+.glass-panel:hover .signal-row {
+  background: rgba(0, 0, 0, 0.32);
+}
+
+/* ── P19. Strategy Orders Panel ──────────────────────────── */
+.strategy-orders-panel {
+  border-radius: 12px;
+  transition: border-color 200ms ease;
+}
+
+.strategy-orders-panel:hover {
+  border-color: rgba(130, 148, 170, 0.22);
+}
+
+.order-status {
+  transition: opacity 200ms ease;
+  font-weight: 600;
+  letter-spacing: 0.03em;
+}
+
+/* ── P20. Selection Color ────────────────────────────────── */
+::selection {
+  background: rgba(219, 255, 108, 0.22);
+  color: #fff;
+}
+
+::-moz-selection {
+  background: rgba(219, 255, 108, 0.22);
+  color: #fff;
+}
+
+/* ── P21. Print Styles ───────────────────────────────────── */
+@media print {
+  .cinema-stage,
+  .app-ambient,
+  .app-grid-bg,
+  .mobile-tabbar,
+  .cinema-beam,
+  .cinema-grid,
+  .cinema-vignette,
+  .cinema-scanline {
+    display: none !important;
+  }
+
+  body {
+    background: #fff !important;
+    color: #000 !important;
   }
 }

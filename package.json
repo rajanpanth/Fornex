@@ -7,7 +7,7 @@
     "test": "anchor test",
     "deploy": "anchor deploy",
     "agent": "ts-node agent/src/index.ts",
-    "dev": "next dev",
+    "dev": "next dev -p 3001",
     "anchor:build": "anchor build"
   },
   "dependencies": {

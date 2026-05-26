@@ -10,12 +10,15 @@ export function useVault() {
   const refresh = useCallback(async () => {
     try {
       const info = await connection.getAccountInfo(VAULT_ADDRESS);
-      if (info) setVault(decodeVault(info.data as Buffer));
+      if (info) {
+        setVault(decodeVault(info.data as Buffer));
+      }
     } catch {
       /* silent */
     }
   }, [connection]);
 
+  // Primary poll – fires immediately on mount
   useEffect(() => {
     void refresh();
     const id = setInterval(() => void refresh(), 30_000);
@@ -32,3 +35,4 @@ export function useVault() {
 
   return { vault, nav, trades, winRate, winningTrades, refresh };
 }
+

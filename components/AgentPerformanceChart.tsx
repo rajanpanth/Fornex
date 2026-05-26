@@ -52,7 +52,7 @@ export default function AgentPerformanceChart({
             />
             <YAxis
               domain={[0, 100]}
-              tick={{ fill: "#334155", fontSize: 10, fontFamily: "JetBrains Mono" }}
+              tick={{ fill: "#5e738a", fontSize: 10, fontFamily: "JetBrains Mono" }}
               axisLine={false}
               tickLine={false}
             />

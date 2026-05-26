@@ -14,14 +14,13 @@ export function useDecisions() {
 
   const refresh = useCallback(async () => {
     try {
-      const [currentAccounts, legacyAccounts] = await Promise.all([
-        connection.getProgramAccounts(PROGRAM_ID, {
-          filters: [{ dataSize: DECISION_ACCOUNT_SIZE }],
-        }),
-        connection.getProgramAccounts(PROGRAM_ID, {
-          filters: [{ dataSize: LEGACY_DECISION_ACCOUNT_SIZE }],
-        }),
-      ]);
+      // Run sequentially to avoid concurrent getProgramAccounts 429s on public devnet
+      const currentAccounts = await connection.getProgramAccounts(PROGRAM_ID, {
+        filters: [{ dataSize: DECISION_ACCOUNT_SIZE }],
+      });
+      const legacyAccounts = await connection.getProgramAccounts(PROGRAM_ID, {
+        filters: [{ dataSize: LEGACY_DECISION_ACCOUNT_SIZE }],
+      });
       const accounts = [...currentAccounts, ...legacyAccounts];
       console.log('[fornex] raw accounts:', accounts.length);
       const parsed = accounts
@@ -37,6 +36,7 @@ export function useDecisions() {
     }
   }, [connection]);
 
+  // Primary poll – fires immediately on mount
   useEffect(() => {
     void refresh();
     const id = setInterval(() => void refresh(), 30_000);
@@ -45,3 +45,4 @@ export function useDecisions() {
 
   return { decisions, refresh };
 }
+

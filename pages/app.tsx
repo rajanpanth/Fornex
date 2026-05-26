@@ -1,6 +1,7 @@
 import Head from "next/head";
 import Link from "next/link";
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useRouter } from "next/router";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useConnection, useWallet } from "@solana/wallet-adapter-react";
 import { WalletMultiButton } from "@solana/wallet-adapter-react-ui";
 import {
@@ -49,6 +50,7 @@ import ToastContainer, { useToasts } from "../components/Toast";
 export default function AppDashboard() {
   const { connection } = useConnection();
   const wallet = useWallet();
+  const router = useRouter();
   const [mounted, setMounted] = useState(false);
   const [loading, setLoading] = useState(false);
   const [solPrice, setSolPrice] = useState({ price: 0, change: 0 });
@@ -56,11 +58,23 @@ export default function AppDashboard() {
   const [fnrxBalance, setFnrxBalance] = useState<number | null>(null);
   const [newDecisionAlert, setNewDecisionAlert] = useState(false);
   const [priorityFee, setPriorityFee] = useState<"DYNAMIC" | "FAST" | "TURBO">("DYNAMIC");
+  const [feeDropdownOpen, setFeeDropdownOpen] = useState(false);
+  const feeRef = useRef<HTMLDivElement>(null);
   const [pythStatus, setPythStatus] = useState<"UP" | "DOWN">("UP");
   const [rpcStatus, setRpcStatus] = useState<"UP" | "DOWN">("UP");
   const [mobileTab, setMobileTab] = useState<"vault" | "feed" | "trade" | "stats">("vault");
 
   useEffect(() => { setMounted(true); }, []);
+
+  useEffect(() => {
+    const handler = (e: MouseEvent) => {
+      if (feeRef.current && !feeRef.current.contains(e.target as Node)) {
+        setFeeDropdownOpen(false);
+      }
+    };
+    document.addEventListener("mousedown", handler);
+    return () => document.removeEventListener("mousedown", handler);
+  }, []);
 
   // Hooks
   const { vault, nav, trades, winRate, refresh } = useVault();
@@ -68,6 +82,17 @@ export default function AppDashboard() {
   const { userDeposit, userSharesSol, userPnlPct } = usePosition(vault);
   const { toasts, addToast, removeToast } = useToasts();
   const cycle = useAgentCycle(refreshDecisions);
+
+  // Re-fetch immediately when navigating to this page client-side
+  // (handles the case where the initial hook effects fired before RPC was ready)
+  useEffect(() => {
+    const onRouteChange = () => {
+      void refresh();
+      void refreshDecisions();
+    };
+    router.events.on("routeChangeComplete", onRouteChange);
+    return () => router.events.off("routeChangeComplete", onRouteChange);
+  }, [router.events, refresh, refreshDecisions]);
 
   useEffect(() => {
     const eventSource = new EventSource("/api/events");
@@ -280,32 +305,48 @@ export default function AppDashboard() {
           </div>
 
           <div className="app-topbar-center">
-            <div className="live-indicator">
-              <span className="live-dot" />
+            <div className="live-indicator" role="status" aria-live="polite">
+              <span className="live-dot" aria-hidden="true" />
               AGENT LIVE
             </div>
-            <div className={`cycle-topbar ${cycle.thinking ? "thinking" : ""}`}>
-              Next decision in {cycle.label}
+            <div className={`cycle-topbar ${cycle.thinking ? "thinking" : ""}`} aria-label={`Next agent decision in ${cycle.label}`}>
+              {cycle.thinking ? "Thinking…" : `Next in ${cycle.label}`}
             </div>
-            <div className="risk-indicator">RISK: NORMAL</div>
+            <div className="risk-indicator" aria-label="Risk level: normal">RISK: NORMAL</div>
             {newDecisionAlert && (
-              <div className="new-decision-badge">NEW DECISION</div>
+              <div className="new-decision-badge" role="alert">NEW DECISION</div>
             )}
           </div>
 
           <div className="app-topbar-right">
-            <div className="priority-fee">
+            <div className="priority-fee" ref={feeRef}>
               <span className="label">Priority Fee:</span>
-              <select
-                value={priorityFee}
-                onChange={(event) =>
-                  setPriorityFee(event.target.value as typeof priorityFee)
-                }
+              <button
+                className="fee-value"
+                onClick={() => setFeeDropdownOpen(o => !o)}
+                aria-expanded={feeDropdownOpen}
+                aria-haspopup="listbox"
               >
-                <option value="DYNAMIC">DYNAMIC</option>
-                <option value="FAST">FAST</option>
-                <option value="TURBO">TURBO</option>
-              </select>
+                {priorityFee}
+                <svg width="10" height="6" viewBox="0 0 10 6" fill="none" aria-hidden="true">
+                  <path d="M1 1l4 4 4-4" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
+                </svg>
+              </button>
+              {feeDropdownOpen && (
+                <div className="fee-dropdown" role="listbox">
+                  {(["DYNAMIC", "FAST", "TURBO"] as const).map(opt => (
+                    <button
+                      key={opt}
+                      role="option"
+                      aria-selected={priorityFee === opt}
+                      className={`fee-option${priorityFee === opt ? " active" : ""}`}
+                      onClick={() => { setPriorityFee(opt); setFeeDropdownOpen(false); }}
+                    >
+                      {opt}
+                    </button>
+                  ))}
+                </div>
+              )}
             </div>
             <div className="pyth-status">
               <span className={pythStatus === "UP" ? "green" : "red"}>●</span>
@@ -355,10 +396,10 @@ export default function AppDashboard() {
 
           {/* RIGHT COLUMN */}
           <div className={`app-col-right mobile-panel mobile-stats ${mobileTab === "stats" ? "active" : ""}`}>
+            <AgentEarnings trades={trades} winRate={winRate} cycle={cycle} />
+            <AgentPerformanceChart decisions={decisions} />
             <EquityCurve vault={vault} />
             <StrategyOrdersPanel decision={decisions[0] ?? null} />
-            <AgentPerformanceChart decisions={decisions} />
-            <AgentEarnings trades={trades} winRate={winRate} cycle={cycle} />
           </div>
         </div>
 

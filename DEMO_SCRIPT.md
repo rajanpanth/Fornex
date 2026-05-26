@@ -133,8 +133,8 @@ anchor build
 
 ## Browser Pages to Open
 
-1. **Landing page**: `https://YOUR-VERCEL-DOMAIN.vercel.app/`
-2. **App dashboard**: `https://YOUR-VERCEL-DOMAIN.vercel.app/app`
+1. **Landing page**: `https://fornexlab.vercel.app/`
+2. **App dashboard**: `https://fornexlab.vercel.app/app`
 3. **Program on Explorer**: `https://explorer.solana.com/address/H6vbfTp6XwfFSHWtpzjZuyrx6bpnp8Rwt6bVZAUT6vZf?cluster=devnet`
 4. **$FNRX Mint on Explorer**: `https://explorer.solana.com/address/BNBf6ed4h8dZiVd8wpUkcv8BUyFsp75eidkcUhSb94vj?cluster=devnet`
 5. **Vault PDA on Explorer**: `https://explorer.solana.com/address/HMkL7zzAroE919esVY6HSMYzB2ejHM5m4A8JKCSrgBXR?cluster=devnet`

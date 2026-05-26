@@ -275,6 +275,17 @@ function LiveDecisionPreview() {
 export default function LandingPage() {
   const rootRef = useRef<HTMLDivElement>(null);
   const [scrolled, setScrolled] = useState(false);
+  const [navOpen, setNavOpen] = useState(false);
+
+  // Lock body scroll when nav overlay is open
+  useEffect(() => {
+    if (navOpen) {
+      document.body.classList.add("nav-open");
+    } else {
+      document.body.classList.remove("nav-open");
+    }
+    return () => { document.body.classList.remove("nav-open"); };
+  }, [navOpen]);
 
   useEffect(() => {
     let lenis: any;
@@ -351,10 +362,16 @@ export default function LandingPage() {
 
     bootMotion();
     const onScroll = () => setScrolled(window.scrollY > 80);
+    const onScrollCloseNav = () => setNavOpen(false);
+    const onKeyDown = (e: KeyboardEvent) => { if (e.key === "Escape") setNavOpen(false); };
     window.addEventListener("scroll", onScroll, { passive: true });
+    window.addEventListener("scroll", onScrollCloseNav, { passive: true });
+    window.addEventListener("keydown", onKeyDown);
     return () => {
       cancelAnimationFrame(rafId);
       window.removeEventListener("scroll", onScroll);
+      window.removeEventListener("scroll", onScrollCloseNav);
+      window.removeEventListener("keydown", onKeyDown);
       ctx?.revert();
       lenis?.destroy();
     };
@@ -374,15 +391,49 @@ export default function LandingPage() {
       <div className="cinematic-page" ref={rootRef}>
         <StageBackground />
 
+        {/* Mobile nav overlay */}
+        <div
+          className={`mobile-nav-overlay${navOpen ? " open" : ""}`}
+          role="dialog"
+          aria-modal="true"
+          aria-label="Navigation menu"
+        >
+          <button
+            className="mobile-nav-close"
+            onClick={() => setNavOpen(false)}
+            aria-label="Close navigation"
+          >
+            ✕
+          </button>
+          <a href="#agents" onClick={() => setNavOpen(false)}>Agents</a>
+          <a href="#protocol" onClick={() => setNavOpen(false)}>Protocol</a>
+          <a href="#proof" onClick={() => setNavOpen(false)}>Proof</a>
+          <a href="#security" onClick={() => setNavOpen(false)}>Security</a>
+          <Link href="/app" className="mobile-nav-launch" onClick={() => setNavOpen(false)}>
+            Launch App <ArrowRight size={18} />
+          </Link>
+        </div>
+
         <header className={`cinematic-nav ${scrolled ? "is-scrolled" : ""}`}>
           <Link href="/" className="cinematic-logo">FORNEX</Link>
-          <nav>
+          <nav aria-label="Primary navigation">
             <a href="#agents">Agents</a>
             <a href="#protocol">Protocol</a>
             <a href="#proof">Proof</a>
             <a href="#security">Security</a>
           </nav>
           <Link href="/app" className="nav-pill">Launch App</Link>
+          <button
+            className="nav-hamburger"
+            aria-label="Open navigation menu"
+            aria-expanded={navOpen}
+            aria-controls="mobile-nav"
+            onClick={() => setNavOpen((o) => !o)}
+          >
+            <span />
+            <span />
+            <span />
+          </button>
         </header>
 
         <main>
