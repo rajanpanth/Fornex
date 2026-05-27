@@ -1,8 +1,19 @@
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { Connection, PublicKey } from "@solana/web3.js";
 import { Buffer } from "buffer";
 import Head from "next/head";
 import Link from "next/link";
+import {
+  ArrowLeft,
+  ArrowRight,
+  CheckCircle2,
+  Database,
+  ExternalLink,
+  Hash,
+  Network,
+  Radio,
+  ShieldCheck,
+} from "lucide-react";
 import {
   DECISION_ACCOUNT_SIZE,
   Decision,
@@ -13,12 +24,18 @@ import {
 } from "../lib/chain";
 
 const PROGRAM_ID = "H6vbfTp6XwfFSHWtpzjZuyrx6bpnp8Rwt6bVZAUT6vZf";
+const VAULT_PDA = "HMkL7zzAroE919esVY6HSMYzB2ejHM5m4A8JKCSrgBXR";
+const FNRX_MINT = "BNBf6ed4h8dZiVd8wpUkcv8BUyFsp75eidkcUhSb94vj";
 const RPC = "https://api.devnet.solana.com";
+
+type Filter = "all" | "long" | "short" | "flat";
 
 export default function ProofPage() {
   const [entries, setEntries] = useState<Decision[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [filter, setFilter] = useState<Filter>("all");
+  const [lastSync, setLastSync] = useState<number | null>(null);
 
   useEffect(() => {
     let cancelled = false;
@@ -45,6 +62,8 @@ export default function ProofPage() {
         if (!cancelled) {
           setEntries(decoded);
           setLoading(false);
+          setError(null);
+          setLastSync(Date.now());
         }
       } catch (err: any) {
         if (!cancelled) {
@@ -62,6 +81,24 @@ export default function ProofPage() {
     };
   }, []);
 
+  const stats = useMemo(() => {
+    const longs = entries.filter((e) => e.consensus.direction === 1).length;
+    const shorts = entries.filter((e) => e.consensus.direction === 2).length;
+    const flats = entries.filter((e) => e.consensus.direction === 0).length;
+    const executed = entries.filter((e) => e.executed).length;
+    return { longs, shorts, flats, executed };
+  }, [entries]);
+
+  const visibleEntries = useMemo(() => {
+    if (filter === "all") return entries;
+    const dirNum = filter === "long" ? 1 : filter === "short" ? 2 : 0;
+    return entries.filter((e) => e.consensus.direction === dirNum);
+  }, [entries, filter]);
+
+  const lastSyncLabel = lastSync
+    ? `${Math.max(1, Math.floor((Date.now() - lastSync) / 1000))}s ago`
+    : "—";
+
   return (
     <>
       <Head>
@@ -72,87 +109,228 @@ export default function ProofPage() {
         />
       </Head>
       <div className="proof-page">
-        <div className="proof-header">
-          <h1>On-Chain Proof</h1>
-          <p>
-            Every AI decision permanently stored on Solana. Click any entry to
-            verify on Explorer.
-          </p>
-          <div className="proof-stats">
-            <span>{entries.length} decisions</span>
-            <span>·</span>
-            <span>Solana Devnet</span>
-            <span>·</span>
-            <span>Agent running since May 22, 2026</span>
+        <div className="proof-bg" aria-hidden="true">
+          <div className="proof-bg__beam" />
+          <div className="proof-bg__grid" />
+        </div>
+
+        <header className="proof-topbar">
+          <Link href="/" className="proof-topbar__logo">
+            FORNEX
+          </Link>
+          <nav className="proof-topbar__nav" aria-label="Primary">
+            <Link href="/">Home</Link>
+            <Link href="/app">App</Link>
+            <Link href="/proof" aria-current="page">
+              Proof
+            </Link>
+          </nav>
+          <Link href="/app" className="proof-topbar__cta">
+            Launch App <ArrowRight size={15} />
+          </Link>
+        </header>
+
+        <section className="proof-hero">
+          <div className="proof-hero__kicker">
+            <ShieldCheck size={13} />
+            ON-CHAIN PROOF · SOLANA DEVNET
           </div>
-          <div className="proof-stats" style={{ marginTop: 8 }}>
+          <h1 className="proof-hero__title">
+            Every AI decision. Permanent. Verifiable.
+          </h1>
+          <p className="proof-hero__sub">
+            Each entry below is a Solana account written by the Fornex agent.
+            Click any row to inspect votes, reasoning, and the consensus on
+            Solana Explorer.
+          </p>
+
+          <div className="proof-hero__refs">
             <a
+              className="proof-ref"
               href={`https://explorer.solana.com/address/${PROGRAM_ID}?cluster=devnet`}
               target="_blank"
               rel="noopener noreferrer"
             >
-              Program ↗
+              <Hash size={13} />
+              <span className="proof-ref__label">Program</span>
+              <span className="proof-ref__value">
+                {PROGRAM_ID.slice(0, 4)}…{PROGRAM_ID.slice(-4)}
+              </span>
+              <ExternalLink size={11} />
             </a>
-            <span>·</span>
             <a
-              href="https://explorer.solana.com/address/HMkL7zzAroE919esVY6HSMYzB2ejHM5m4A8JKCSrgBXR?cluster=devnet"
+              className="proof-ref"
+              href={`https://explorer.solana.com/address/${VAULT_PDA}?cluster=devnet`}
               target="_blank"
               rel="noopener noreferrer"
             >
-              Vault PDA ↗
+              <Database size={13} />
+              <span className="proof-ref__label">Vault PDA</span>
+              <span className="proof-ref__value">
+                {VAULT_PDA.slice(0, 4)}…{VAULT_PDA.slice(-4)}
+              </span>
+              <ExternalLink size={11} />
             </a>
-            <span>·</span>
             <a
-              href="https://explorer.solana.com/address/BNBf6ed4h8dZiVd8wpUkcv8BUyFsp75eidkcUhSb94vj?cluster=devnet"
+              className="proof-ref"
+              href={`https://explorer.solana.com/address/${FNRX_MINT}?cluster=devnet`}
               target="_blank"
               rel="noopener noreferrer"
             >
-              $FNRX Mint ↗
+              <Network size={13} />
+              <span className="proof-ref__label">$FNRX Mint</span>
+              <span className="proof-ref__value">
+                {FNRX_MINT.slice(0, 4)}…{FNRX_MINT.slice(-4)}
+              </span>
+              <ExternalLink size={11} />
             </a>
           </div>
-        </div>
 
-        {loading ? (
-          <div className="proof-loading">Fetching from Solana devnet…</div>
-        ) : error ? (
-          <div className="proof-loading">
-            Couldn&apos;t reach devnet: {error}
+          <div className="proof-hero__stats">
+            <div>
+              <strong>{loading ? "—" : entries.length}</strong>
+              <span>Decisions</span>
+            </div>
+            <div>
+              <strong className="up">{loading ? "—" : stats.longs}</strong>
+              <span>Long</span>
+            </div>
+            <div>
+              <strong className="down">{loading ? "—" : stats.shorts}</strong>
+              <span>Short</span>
+            </div>
+            <div>
+              <strong className="muted">{loading ? "—" : stats.flats}</strong>
+              <span>Flat</span>
+            </div>
+            <div>
+              <strong>{loading ? "—" : stats.executed}</strong>
+              <span>Executed</span>
+            </div>
+            <div className="proof-hero__sync">
+              <Radio size={11} />
+              <span>Synced {lastSyncLabel}</span>
+            </div>
           </div>
-        ) : entries.length === 0 ? (
-          <div className="proof-loading">
-            No decisions found. Agent makes a new decision every 15 minutes.
-          </div>
-        ) : (
-          <div className="proof-grid">
-            {entries.map((entry) => {
-              const dir = dirLabel(entry.consensus.direction);
+        </section>
+
+        <div className="proof-toolbar">
+          <div className="proof-filters" role="tablist" aria-label="Filter decisions">
+            {(["all", "long", "short", "flat"] as Filter[]).map((f) => {
+              const count =
+                f === "all"
+                  ? entries.length
+                  : f === "long"
+                  ? stats.longs
+                  : f === "short"
+                  ? stats.shorts
+                  : stats.flats;
               return (
-                <a
-                  key={entry.pubkey.toBase58()}
-                  href={`https://explorer.solana.com/address/${entry.pubkey.toBase58()}?cluster=devnet`}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="proof-entry"
+                <button
+                  key={f}
+                  role="tab"
+                  aria-selected={filter === f}
+                  className={`proof-filter ${filter === f ? "is-active" : ""} f-${f}`}
+                  onClick={() => setFilter(f)}
                 >
-                  <span className="proof-index">#{entry.decisionIndex}</span>
-                  <span className="proof-pubkey">
-                    {entry.pubkey.toBase58().slice(0, 8)}…
-                    {entry.pubkey.toBase58().slice(-8)}
-                  </span>
-                  <span className="proof-time">
-                    {dir} · {formatTimeAgo(entry.timestamp)}
-                  </span>
-                  <span className="proof-arrow">↗</span>
-                </a>
+                  <span>{f === "all" ? "All" : f.toUpperCase()}</span>
+                  <small>{count}</small>
+                </button>
               );
             })}
           </div>
-        )}
-
-        <div className="proof-footer">
-          <Link href="/">← Back to Fornex</Link>
-          <Link href="/app">Open App →</Link>
         </div>
+
+        <main className="proof-main">
+          {loading ? (
+            <div className="proof-skeleton">
+              {Array.from({ length: 6 }).map((_, i) => (
+                <div key={i} className="proof-skeleton__row" />
+              ))}
+            </div>
+          ) : error ? (
+            <div className="proof-empty">
+              <strong>Couldn&apos;t reach devnet</strong>
+              <p>{error}</p>
+              <p className="proof-empty__hint">
+                Public devnet RPC rate-limits aggressively. The page will
+                retry every 60 seconds, or you can open Solana Explorer
+                directly via the program link above.
+              </p>
+            </div>
+          ) : visibleEntries.length === 0 ? (
+            <div className="proof-empty">
+              <strong>
+                {entries.length === 0
+                  ? "No decisions yet"
+                  : "No decisions match this filter"}
+              </strong>
+              <p>
+                {entries.length === 0
+                  ? "Agent makes a new decision every 15 minutes. Check back shortly."
+                  : "Try a different direction filter."}
+              </p>
+            </div>
+          ) : (
+            <div className="proof-list">
+              {visibleEntries.map((entry) => {
+                const dir = dirLabel(entry.consensus.direction);
+                const cls = dir.toLowerCase();
+                return (
+                  <a
+                    key={entry.pubkey.toBase58()}
+                    href={`https://explorer.solana.com/address/${entry.pubkey.toBase58()}?cluster=devnet`}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className={`proof-entry proof-entry--${cls}`}
+                  >
+                    <span className="proof-entry__index">
+                      #{entry.decisionIndex}
+                    </span>
+                    <span className={`proof-entry__dir is-${cls}`}>{dir}</span>
+                    <span className="proof-entry__lev">
+                      {entry.consensus.leverage}×
+                    </span>
+                    <span className="proof-entry__conf">
+                      {entry.consensus.confidence}% conf
+                    </span>
+                    <span className="proof-entry__pubkey">
+                      {entry.pubkey.toBase58().slice(0, 8)}…
+                      {entry.pubkey.toBase58().slice(-8)}
+                    </span>
+                    <span
+                      className={`proof-entry__exec ${
+                        entry.executed ? "ok" : "skip"
+                      }`}
+                    >
+                      <CheckCircle2 size={12} />
+                      {entry.executed ? "Executed" : "Logged"}
+                    </span>
+                    <span className="proof-entry__time">
+                      {formatTimeAgo(entry.timestamp)}
+                    </span>
+                    <span className="proof-entry__arrow" aria-hidden="true">
+                      <ExternalLink size={14} />
+                    </span>
+                  </a>
+                );
+              })}
+            </div>
+          )}
+        </main>
+
+        <footer className="proof-footer-band">
+          <Link href="/" className="proof-footer-link">
+            <ArrowLeft size={14} /> Back to Fornex
+          </Link>
+          <span className="proof-footer-meta">
+            Devnet only. No real funds. All claims verifiable on Solana
+            Explorer.
+          </span>
+          <Link href="/app" className="proof-footer-link proof-footer-link--alt">
+            Open App <ArrowRight size={14} />
+          </Link>
+        </footer>
       </div>
     </>
   );

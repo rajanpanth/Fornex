@@ -107,9 +107,14 @@ export default function LiveDecisionPreview() {
         </div>
       )}
 
-      <a href="/app" className="live-cta">
-        View all {count} decisions in the app →
-      </a>
+      <div className="live-section-actions">
+        <a href="/app" className="live-cta">
+          View all {count} decisions in the app →
+        </a>
+        <a href="/proof" className="live-cta live-cta--alt">
+          Inspect on-chain proof →
+        </a>
+      </div>
     </section>
   );
 }

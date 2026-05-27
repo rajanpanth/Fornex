@@ -1,5 +1,6 @@
 import Head from "next/head";
 import Link from "next/link";
+import dynamic from "next/dynamic";
 import { useRouter } from "next/router";
 import { useCallback, useEffect, useState } from "react";
 import { useConnection, useWallet } from "@solana/wallet-adapter-react";
@@ -20,7 +21,13 @@ import {
   TOKEN_PROGRAM_ID,
 } from "@solana/spl-token";
 import { Buffer } from "buffer";
-import { BarChart3, BrainCircuit, Landmark, Repeat2 } from "lucide-react";
+import {
+  BarChart3,
+  BrainCircuit,
+  Landmark,
+  Repeat2,
+  ShieldCheck,
+} from "lucide-react";
 
 import {
   PROGRAM_ID,
@@ -48,6 +55,14 @@ import AgentEarnings from "../components/AgentEarnings";
 import StrategyOrdersPanel from "../components/StrategyOrdersPanel";
 import ToastContainer, { useToasts } from "../components/Toast";
 import StatusBar from "../components/StatusBar";
+import WalletDisconnected from "../components/WalletDisconnected";
+import RiskStatusCard from "../components/RiskStatusCard";
+
+// Lazy import keeps the initial paint snappy and avoids running its RPC fetch in SSR.
+const TrustStripLazy = dynamic(() => import("../components/TrustStrip"), {
+  ssr: false,
+  loading: () => <div className="app-trust__skeleton" aria-hidden="true" />,
+});
 
 export default function AppDashboard() {
   const { connection } = useConnection();
@@ -221,7 +236,7 @@ export default function AppDashboard() {
         if (kind === "deposit") {
           addToast(
             "success",
-            "Deposit confirmed!",
+            "Deposit confirmed",
             `${formatTokenAmount(estimatedSharesRaw)} $FNRX tokens minted to your wallet.`,
             sig,
             {
@@ -233,7 +248,7 @@ export default function AppDashboard() {
           addToast(
             "success",
             "Withdrawal confirmed",
-            `${formatTokenAmount(estimatedSharesRaw)} $FNRX tokens burned. ${formatTokenAmount(estimatedSolOutRaw)} SOL returned to your wallet.`,
+            `${formatTokenAmount(estimatedSharesRaw)} $FNRX burned. ${formatTokenAmount(estimatedSolOutRaw)} SOL returned.`,
             sig
           );
         }
@@ -248,13 +263,15 @@ export default function AppDashboard() {
     [wallet, connection, addToast, refresh, refreshFnrxBalance, currentFee, vault]
   );
 
+  const isConnected = mounted && !!wallet.publicKey;
+
   return (
     <>
       <Head>
-        <title>Fornex Protocol — Trading Terminal</title>
+        <title>Fornex — Trading Vault Dashboard</title>
         <meta
           name="description"
-          content="Fornex autonomous AI trading terminal. View agent decisions, vault performance, and manage your position."
+          content="Fornex autonomous AI trading vault. View live agent decisions, vault NAV, and manage your position on Solana devnet."
         />
       </Head>
 
@@ -293,40 +310,54 @@ export default function AppDashboard() {
             <div className={`cycle-topbar ${cycle.thinking ? "thinking" : ""}`} aria-label={`Next agent decision in ${cycle.label}`}>
               {cycle.thinking ? "Thinking…" : `Next in ${cycle.label}`}
             </div>
-            <div className="risk-indicator" aria-label="Risk level: normal">RISK: NORMAL</div>
+            <div
+              className={`risk-indicator ${vault?.isTradingPaused ? "is-paused" : ""}`}
+              aria-label={`Risk level: ${vault?.isTradingPaused ? "paused" : "normal"}`}
+            >
+              <ShieldCheck size={11} aria-hidden="true" />
+              RISK: {vault?.isTradingPaused ? "PAUSED" : "NORMAL"}
+            </div>
             {newDecisionAlert && (
               <div className="new-decision-badge" role="alert">NEW DECISION</div>
             )}
           </div>
 
           <div className="app-topbar-right">
-            <a
+            <Link
               href="/proof"
-              target="_blank"
-              rel="noopener noreferrer"
               className="proof-nav-link"
               title="Wall of on-chain evidence"
             >
               On-Chain Proof ↗
-            </a>
+            </Link>
             <StatusBar level={priorityFee} setLevel={setPriorityFee} />
             {mounted && <WalletMultiButton />}
           </div>
         </header>
+
+        {/* Trust strip — desktop only, summarizes live protocol metrics */}
+        <div className="app-trust">
+          <TrustStripLazy />
+        </div>
 
         {/* ═══ MAIN GRID ═══ */}
         <div className="app-grid">
           {/* LEFT COLUMN */}
           <div className="app-col-left">
             <div className={`mobile-panel mobile-trade ${mobileTab === "trade" ? "active" : ""}`}>
-              <DepositPanel
-                walletConnected={!!wallet.publicKey}
-                loading={loading}
-                onSubmit={sendVaultIx}
-                nav={nav}
-                userSharesRaw={userDeposit?.shares ?? 0n}
-              />
+              {isConnected ? (
+                <DepositPanel
+                  walletConnected={!!wallet.publicKey}
+                  loading={loading}
+                  onSubmit={sendVaultIx}
+                  nav={nav}
+                  userSharesRaw={userDeposit?.shares ?? 0n}
+                />
+              ) : (
+                <WalletDisconnected />
+              )}
               <PositionPanel />
+              <RiskStatusCard vault={vault} />
             </div>
             <div className={`mobile-panel mobile-vault ${mobileTab === "vault" ? "active" : ""}`}>
               <VaultStats
@@ -394,6 +425,7 @@ export default function AppDashboard() {
   );
 }
 
+// Defer trust strip to avoid blocking initial paint
 function parseDecimalUnits(value: string, decimals: number): bigint {
   const normalized = value.trim();
   if (!normalized || normalized === ".") return 0n;

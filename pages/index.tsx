@@ -19,10 +19,18 @@ import {
 } from "lucide-react";
 import LiveDecisionPreview from "../components/LiveDecisionPreview";
 import HeroLiveTicker from "../components/HeroLiveTicker";
+import dynamic from "next/dynamic";
+
+// Lazy-load the trust strip — it makes RPC + /api calls and is below the fold,
+// so we don't want it blocking SSR or fighting other on-page fetches.
+const TrustStrip = dynamic(() => import("../components/TrustStrip"), {
+  ssr: false,
+  loading: () => <div className="trust-strip__skeleton" aria-hidden="true" />,
+});
 
 const stats = [
   ["3", "Specialized agents"],
-  ["24/7", "Autonomous execution"],
+  ["15m", "Autonomous cycle"],
   ["100%", "On-chain decisions"],
   ["0", "Custody assumptions"],
 ];
@@ -51,18 +59,18 @@ const agents = [
   },
 ];
 
-const systems = [
-  ["Decision Debate", "Three agents argue every setup before execution.", BrainCircuit],
-  ["Drift Execution", "Perp orders route through a constrained strategy executor.", CandlestickChart],
-  ["Solana Proof", "Trade intent, votes, and consensus are written on-chain.", DatabaseZap],
-  ["Vault Controls", "Deposits stay transparent with no hidden discretionary layer.", ShieldCheck],
+const systems: Array<[string, string, typeof BrainCircuit]> = [
+  ["Multi-agent consensus", "Three agents argue every setup before any order is sent.", BrainCircuit],
+  ["Pyth market signals", "Funding, open interest, and price are pulled from verified oracle feeds.", RadioTower],
+  ["Drift execution layer", "Perp orders route through a constrained strategy executor on Drift.", CandlestickChart],
+  ["On-chain decision PDAs", "Reasoning, votes, and consensus are written to Solana decision accounts.", DatabaseZap],
 ];
 
 const timeline = [
   ["01", "Ingest", "Funding, OI, volatility, price action, and vault state stream into the agent brain."],
   ["02", "Debate", "BULL, BEAR, and ZEN produce competing recommendations with confidence scores."],
   ["03", "Govern", "Risk checks clamp leverage, position size, and drawdown exposure before any order."],
-  ["04", "Prove", "Consensus and execution evidence are published for investors to audit forever."],
+  ["04", "Prove", "Consensus, votes, and execution reference are written on-chain for permanent audit."],
 ];
 
 function MagneticLink({
@@ -256,10 +264,10 @@ export default function LandingPage() {
   return (
     <>
       <Head>
-        <title>Fornex Protocol - Autonomous AI Trading Agents</title>
+        <title>Fornex — Autonomous AI trading vault on Solana</title>
         <meta
           name="description"
-          content="Fornex is an institutional-grade AI trading agent platform where autonomous agents debate, execute, and prove every trade on Solana."
+          content="Fornex is an autonomous AI trading vault on Solana devnet. A multi-agent brain runs every 15 minutes; every decision is written on-chain and verifiable."
         />
         <meta name="viewport" content="width=device-width, initial-scale=1" />
       </Head>
@@ -285,6 +293,9 @@ export default function LandingPage() {
           <a href="#protocol" onClick={() => setNavOpen(false)}>Protocol</a>
           <a href="#proof" onClick={() => setNavOpen(false)}>Proof</a>
           <a href="#security" onClick={() => setNavOpen(false)}>Security</a>
+          <Link href="/proof" className="mobile-nav-link" onClick={() => setNavOpen(false)}>
+            On-chain proof
+          </Link>
           <Link href="/app" className="mobile-nav-launch" onClick={() => setNavOpen(false)}>
             Launch App <ArrowRight size={18} />
           </Link>
@@ -295,8 +306,8 @@ export default function LandingPage() {
           <nav aria-label="Primary navigation">
             <a href="#agents">Agents</a>
             <a href="#protocol">Protocol</a>
-            <a href="#proof">Proof</a>
             <a href="#security">Security</a>
+            <Link href="/proof">Proof</Link>
           </nav>
           <Link href="/app" className="nav-pill">Launch App</Link>
           <button
@@ -321,7 +332,7 @@ export default function LandingPage() {
                 animate={{ opacity: 1, y: 0, filter: "blur(0px)" }}
                 transition={{ duration: 0.8, ease: [0.22, 1, 0.36, 1] }}
               >
-                <span /> Autonomous Solana vault intelligence
+                <span /> Autonomous AI trading vault · Solana devnet
               </motion.div>
               <motion.h1
                 className="kinetic-title"
@@ -329,15 +340,16 @@ export default function LandingPage() {
                 animate={{ opacity: 1, y: 0, filter: "blur(0px)" }}
                 transition={{ duration: 1.05, delay: 0.08, ease: [0.22, 1, 0.36, 1] }}
               >
-                AI agents that debate, trade, and prove every decision.
+                AI agents that debate, trade, and prove every decision on-chain.
               </motion.h1>
               <motion.p
                 initial={{ opacity: 0, y: 28 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ duration: 0.9, delay: 0.28, ease: [0.22, 1, 0.36, 1] }}
               >
-                Fornex turns trading strategy into an auditable multi-agent system:
-                BULL, BEAR, and ZEN challenge each other before capital moves.
+                Three specialized agents run every 15 minutes. They argue,
+                vote, and a constrained executor places the trade on Drift.
+                Every reasoning step lands in a Solana decision account.
               </motion.p>
               <motion.div
                 className="hero-actions"
@@ -348,9 +360,9 @@ export default function LandingPage() {
                 <MagneticLink href="/app" className="primary-orbit">
                   Launch App <ArrowRight size={18} />
                 </MagneticLink>
-                <a className="ghost-orbit" href="#proof">
-                  Inspect Proof <Sparkles size={17} />
-                </a>
+                <Link className="ghost-orbit" href="/proof">
+                  View live proof <Sparkles size={17} />
+                </Link>
               </motion.div>
               <motion.div
                 initial={{ opacity: 0, y: 16 }}
@@ -369,6 +381,11 @@ export default function LandingPage() {
                 <RadioTower size={18} /> Solana proof stream
               </div>
             </div>
+          </section>
+
+          {/* Trust strip — full-width band so it doesn't fight the hero column. */}
+          <section className="trust-band reveal">
+            <TrustStrip variant="landing" />
           </section>
 
           <section className="metric-strip reveal">
@@ -445,26 +462,57 @@ export default function LandingPage() {
             </div>
           </section>
 
+          <section className="why-hard reveal" id="why-hard">
+            <div className="section-kicker">WHY THIS IS HARD</div>
+            <h2 className="section-heading">The problem the protocol actually solves.</h2>
+            <div className="why-grid">
+              {[
+                {
+                  k: "Agent drift",
+                  v: "LLM agents hallucinate confidently. Fornex forces them to vote and bounds every output through risk caps.",
+                },
+                {
+                  k: "Unverifiable strategies",
+                  v: "Most AI vaults are black boxes. Reasoning is logged on-chain so depositors can audit the brain, not just trust a screenshot.",
+                },
+                {
+                  k: "Execution gap",
+                  v: "Going from prediction to perp order is the failure point. Drift execution sits behind a constrained strategy layer.",
+                },
+                {
+                  k: "Operational reliability",
+                  v: "PM2-supervised runtime keeps the cycle alive. Heartbeats, retries, and on-chain receipts make outages obvious.",
+                },
+              ].map((row) => (
+                <div className="why-card" key={row.k}>
+                  <strong>{row.k}</strong>
+                  <p>{row.v}</p>
+                </div>
+              ))}
+            </div>
+          </section>
+
           <section className="proof-section" id="proof">
             <div>
               <div className="section-kicker reveal">ON-CHAIN MEMORY</div>
               <h2 className="section-heading reveal">No black boxes. No unverifiable genius.</h2>
               <p className="section-copy reveal">
-                Fornex records the reasoning trail, final consensus, market, direction,
-                leverage, and execution reference so depositors can audit the agent brain
-                after the trade, not just trust a dashboard.
+                Fornex records the reasoning trail, final consensus, market,
+                direction, leverage, and execution reference so depositors can
+                audit the agent brain after the trade, not just trust a
+                dashboard.
               </p>
               <div className="proof-actions reveal">
-                <a href="https://solscan.io" target="_blank" rel="noreferrer">
-                  View Explorer <ArrowRight size={17} />
-                </a>
+                <Link href="/proof">
+                  Inspect on-chain decisions <ArrowRight size={17} />
+                </Link>
                 <Link href="/app">Open Vault <WalletCards size={17} /></Link>
               </div>
             </div>
             <div className="proof-stack">
               {[
                 ["Consensus", "2/3 LONG", CheckCircle2],
-                ["Program", "H6vbf...Xwf", GitBranch],
+                ["Program", "H6vbf…6vZf", GitBranch],
                 ["Custody", "User-controlled", LockKeyhole],
                 ["Runtime", "Agent heartbeat live", Cpu],
               ].map(([label, value, Icon]) => (
@@ -481,23 +529,38 @@ export default function LandingPage() {
             <div className="security-copy reveal">
               <h2>Institutional-grade autonomy without surrendering control.</h2>
               <p>
-                The platform is designed around constrained execution, transparent
-                decision logs, and vault-level risk limits so agent intelligence never
-                becomes agent discretion.
+                The platform is designed around constrained execution,
+                transparent decision logs, and vault-level risk limits so agent
+                intelligence never becomes agent discretion.
               </p>
             </div>
             <div className="security-rails">
-              {["Non-custodial vault", "Leverage caps", "Auditable debates", "Emergency pause path"].map((item) => (
+              {[
+                "Non-custodial vault",
+                "Leverage caps",
+                "Auditable debates",
+                "Emergency pause path",
+              ].map((item) => (
                 <div className="rail reveal" key={item}>{item}</div>
               ))}
             </div>
           </section>
 
           <section className="final-cinema">
+            <div className="section-kicker reveal">READY WHEN YOU ARE</div>
             <h2 className="reveal">Put autonomous capital to work with receipts.</h2>
-            <MagneticLink href="/app" className="primary-orbit final-launch">
-              Launch Fornex <ArrowRight size={18} />
-            </MagneticLink>
+            <p className="section-copy reveal" style={{ margin: "0 auto 32px" }}>
+              Devnet only. No real funds, no yield guarantees, no audited
+              claims. Just an honest AI vault with on-chain proof.
+            </p>
+            <div className="final-actions">
+              <MagneticLink href="/app" className="primary-orbit final-launch">
+                Launch Fornex <ArrowRight size={18} />
+              </MagneticLink>
+              <Link href="/proof" className="ghost-orbit">
+                View on-chain proof <Sparkles size={17} />
+              </Link>
+            </div>
           </section>
         </main>
       </div>
