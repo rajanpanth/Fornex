@@ -1,5 +1,5 @@
 import { PublicKey } from "@solana/web3.js";
-import { connection, DRIFT_ENV } from "./config";
+import { signalsConnection, SIGNALS_DRIFT_ENV } from "./config";
 import type { MarketSignals } from "./types";
 
 const SOL_PERP_MARKET_INDEX = 0;
@@ -8,15 +8,14 @@ const oiHistory: Array<{ value: number; ts: number }> = [];
 
 export async function fetchSignals(): Promise<MarketSignals> {
   const timestamp = Date.now();
-  const fallback = safeDefaults(timestamp);
 
   try {
     const drift = await import("@drift-labs/sdk");
     const wallet = readOnlyWallet();
     const driftClient = new (drift as any).DriftClient({
-      connection,
+      connection: signalsConnection,
       wallet,
-      env: DRIFT_ENV,
+      env: SIGNALS_DRIFT_ENV,
     });
 
     await driftClient.subscribe();
@@ -32,7 +31,7 @@ export async function fetchSignals(): Promise<MarketSignals> {
           oracleData?.price
       );
       const indexPrice = numberFromDrift(oracleData?.price) || markPrice;
-      const currentPrice = markPrice || indexPrice || fallback.currentPrice;
+      const currentPrice = markPrice || indexPrice;
       const fundingRate = getFundingRate(driftClient, perpMarket);
       const openInterest = getOpenInterest(perpMarket);
       const oiChange = getOiChange(openInterest, timestamp);
@@ -59,20 +58,35 @@ export async function fetchSignals(): Promise<MarketSignals> {
     }
   } catch (error) {
     console.warn("[signals] Drift fetch failed; using safe defaults", error);
-    return fallback;
+    return await safeDefaults(timestamp);
   }
 }
 
-function safeDefaults(timestamp: number): MarketSignals {
-  return {
+async function fetchSolPriceUSD(): Promise<number> {
+  // Coingecko is rate-limited but free and works fine for a 15-minute cycle.
+  // If it fails we fall back to a known recent value so agents never see $0.
+  try {
+    const res = await fetch(
+      "https://api.coingecko.com/api/v3/simple/price?ids=solana&vs_currencies=usd"
+    );
+    if (!res.ok) return 0;
+    const json = (await res.json()) as { solana?: { usd?: number } };
+    return Number(json?.solana?.usd) || 0;
+  } catch {
+    return 0;
+  }
+}
+
+function safeDefaults(timestamp: number): Promise<MarketSignals> {
+  return fetchSolPriceUSD().then((price) => ({
     fundingRate: 0,
     oiChange: 0,
     lsRatio: 1,
     markIndexSpread: 0,
-    liqWallPrice: 0,
-    currentPrice: 0,
+    liqWallPrice: round((price || 150) * 0.92),
+    currentPrice: round(price || 150),
     timestamp,
-  };
+  }));
 }
 
 function readOnlyWallet() {
