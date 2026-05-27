@@ -9,15 +9,18 @@
 [![GPT-4o](https://img.shields.io/badge/AI-GPT--4o-green)]()
 [![License](https://img.shields.io/badge/License-MIT-yellow)]()
 
-## 🔴 Live on Solana Devnet
+## 🌐 Links
 
 | Resource | Link |
 |---|---|
-| Program | [Explorer](https://explorer.solana.com/address/H6vbfTp6XwfFSHWtpzjZuyrx6bpnp8Rwt6bVZAUT6vZf?cluster=devnet) |
-| Vault PDA | [Explorer](https://explorer.solana.com/address/HMkL7zzAroE919esVY6HSMYzB2ejHM5m4A8JKCSrgBXR?cluster=devnet) |
-| $FNRX Mint | [Explorer](https://explorer.solana.com/address/BNBf6ed4h8dZiVd8wpUkcv8BUyFsp75eidkcUhSb94vj?cluster=devnet) |
+| Live App | https://fornexlab.vercel.app |
+| Demo Video | [Recording in progress] |
+| Program | https://explorer.solana.com/address/H6vbfTp6XwfFSHWtpzjZuyrx6bpnp8Rwt6bVZAUT6vZf?cluster=devnet |
+| Vault PDA | https://explorer.solana.com/address/HMkL7zzAroE919esVY6HSMYzB2ejHM5m4A8JKCSrgBXR?cluster=devnet |
+| $FNRX Token | https://explorer.solana.com/address/BNBf6ed4h8dZiVd8wpUkcv8BUyFsp75eidkcUhSb94vj?cluster=devnet |
+| On-Chain Proof | https://fornexlab.vercel.app/proof |
 | Agent Running Since | May 22, 2026 |
-| On-Chain Decisions | 27+ (growing every 15 min) |
+| On-Chain Decisions | 30+ (growing every 15 min) |
 
 ## What Makes This Technically Heavy
 
@@ -41,7 +44,7 @@
 | Price Feed | Pyth Oracle on-chain | External Program CPI |
 | NAV History | On-chain NavRecord accounts | Custom PDA indexing |
 | Real-time Feed | Helius webhook + SSE | Blockchain indexing |
-| Trade Execution | Drift Protocol SDK | DeFi protocol CPI |
+| Trade Execution | Drift Protocol SDK | Drift Protocol SDK execution |
 | AI Agents | Azure GPT-4o × 3 | Multi-agent consensus |
 | Payments | pay.sh streaming | Agentic micropayments |
 | Transparency | On-chain reasoning | Permanent + auditable |
@@ -255,6 +258,14 @@ performance chart can be rebuilt directly from Solana account history.
 |---|---|
 | Deposit 0.5 SOL | https://solscan.io/tx/4AQNwfbUs1Z3cbo7VLreCeLgrrh1r7PnCzoKQzYQoL97JgQiQw4TWeiHpJsjvy6roAwq9F4BSqdukfsEcBsZRvRj?cluster=devnet |
 | Withdraw SOL | https://solscan.io/tx/4bfNiVKpZFKAzYvNmkUbbF2xzPGQKsq8faUqsKMFjbz6VzN2ef1qNFWMZahP3ScHQ7sropae9DfLcj5khVcbtwR1?cluster=devnet |
+
+## Known Limitations (Devnet Prototype)
+
+- Agent executes trades via its own wallet, not vault CPI
+- NAV updates are calculated off-chain by the agent
+- Not audited — devnet only, no real funds
+- emergency_pause covers trading and NAV updates, not deposits/withdrawals
+- Live decision feed depends on devnet RPC availability
 
 ---
 

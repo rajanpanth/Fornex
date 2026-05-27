@@ -6867,17 +6867,9 @@ body.nav-open {
 }
 
 /* ── P9. Subtle Animation Timing ─────────────────────────── */
-/* Smoother pulse dot */
-@keyframes pulse-dot {
-  0%, 100% { opacity: 1; transform: scale(1); }
-  50% { opacity: 0.35; transform: scale(1.35); }
-}
-
-/* Smoother breathing animation */
-@keyframes breathe {
-  0%, 100% { opacity: 0.25; }
-  50% { opacity: 0.55; }
-}
+/* Note: pulse-dot and breathe are defined earlier in this file
+   (around lines 2312 and 2338). The duplicate refined versions
+   were removed to prevent override confusion. */
 
 /* Decision card slide-in: smoother easing */
 @keyframes slide-in-top {
@@ -7164,4 +7156,212 @@ button,
     background: #fff !important;
     color: #000 !important;
   }
+}
+
+
+/* ── Hero Live Ticker (above-the-fold on-chain proof) ───── */
+.hero-live-ticker {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 18px;
+  background: rgba(255, 255, 255, 0.03);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 99px;
+  font-family: var(--font-mono);
+  font-size: 12px;
+  margin-top: 24px;
+  backdrop-filter: blur(10px);
+}
+.hero-live-ticker .ticker-dot {
+  color: var(--emerald);
+  font-size: 8px;
+  animation: pulse-dot 2s infinite;
+}
+.hero-live-ticker .ticker-label {
+  color: var(--text-tertiary);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+.hero-live-ticker .ticker-direction {
+  font-weight: 600;
+  letter-spacing: 0.04em;
+}
+.hero-live-ticker .ticker-direction.long  { color: var(--emerald); }
+.hero-live-ticker .ticker-direction.short { color: var(--crimson); }
+.hero-live-ticker .ticker-direction.flat  { color: var(--text-secondary); }
+.hero-live-ticker .ticker-conf { color: var(--text-secondary); }
+.hero-live-ticker .ticker-time { color: var(--text-tertiary); }
+.hero-live-ticker .ticker-link {
+  color: var(--text-tertiary);
+  text-decoration: none;
+  transition: color 150ms ease;
+}
+.hero-live-ticker .ticker-link:hover { color: var(--sapphire); }
+
+@media (max-width: 768px) {
+  .hero-live-ticker {
+    flex-wrap: wrap;
+    justify-content: center;
+    font-size: 11px;
+    padding: 6px 14px;
+  }
+}
+
+/* ── LiveDecisionPreview empty state ────────────────────── */
+.live-empty-state {
+  text-align: center;
+  padding: 48px 24px;
+  border: 1px dashed var(--border-default);
+  border-radius: var(--radius-lg);
+  max-width: 400px;
+  margin: 0 auto;
+}
+.live-scanning {
+  display: flex;
+  justify-content: center;
+  gap: 8px;
+  margin-bottom: 16px;
+}
+.scan-dot {
+  color: var(--emerald);
+  font-size: 10px;
+  animation: pulse-dot 2s infinite;
+}
+.scan-dot:nth-child(2) { animation-delay: 0.3s; }
+.scan-dot:nth-child(3) { animation-delay: 0.6s; }
+.live-empty-text {
+  font-size: 14px;
+  color: var(--text-secondary);
+  margin: 0 0 8px;
+}
+.live-empty-sub {
+  font-size: 12px;
+  color: var(--text-tertiary);
+  margin: 0;
+  max-width: 280px;
+  margin-left: auto;
+  margin-right: auto;
+  line-height: 1.5;
+}
+
+/* ── /proof page ────────────────────────────────────────── */
+.proof-page {
+  min-height: 100vh;
+  background: var(--bg-base);
+  padding: 80px 40px;
+  max-width: 1000px;
+  margin: 0 auto;
+}
+.proof-header {
+  text-align: center;
+  margin-bottom: 48px;
+}
+.proof-header h1 {
+  font-size: 32px;
+  font-weight: 700;
+  color: var(--text-primary);
+  margin-bottom: 12px;
+}
+.proof-header p {
+  color: var(--text-secondary);
+  font-size: 15px;
+}
+.proof-stats {
+  display: flex;
+  justify-content: center;
+  gap: 12px;
+  margin-top: 16px;
+  font-family: var(--font-mono);
+  font-size: 12px;
+  color: var(--text-tertiary);
+  flex-wrap: wrap;
+}
+.proof-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+  gap: 8px;
+  margin-bottom: 48px;
+}
+.proof-entry {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px 16px;
+  background: var(--bg-surface);
+  border: 1px solid var(--border-dim);
+  border-radius: var(--radius-md);
+  text-decoration: none;
+  transition: all 150ms ease;
+}
+.proof-entry:hover {
+  border-color: var(--border-bright);
+  background: var(--bg-elevated);
+  transform: translateY(-1px);
+}
+.proof-index {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  color: var(--emerald);
+  min-width: 36px;
+}
+.proof-pubkey {
+  font-family: var(--font-mono);
+  font-size: 12px;
+  color: var(--text-secondary);
+  flex: 1;
+}
+.proof-time {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  color: var(--text-tertiary);
+}
+.proof-arrow {
+  color: var(--text-tertiary);
+  font-size: 12px;
+}
+.proof-loading {
+  text-align: center;
+  padding: 64px 24px;
+  color: var(--text-secondary);
+  font-family: var(--font-mono);
+  font-size: 13px;
+}
+.proof-footer {
+  display: flex;
+  justify-content: space-between;
+  padding-top: 24px;
+  border-top: 1px solid var(--border-dim);
+}
+.proof-footer a {
+  color: var(--text-secondary);
+  text-decoration: none;
+  font-size: 13px;
+}
+.proof-footer a:hover { color: var(--text-primary); }
+
+@media (max-width: 768px) {
+  .proof-page { padding: 48px 16px; }
+  .proof-header h1 { font-size: 24px; }
+}
+
+/* ── Topbar /proof nav link ─────────────────────────────── */
+.proof-nav-link {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--text-secondary);
+  padding: 6px 10px;
+  border: 1px solid var(--border-dim);
+  border-radius: var(--radius-sm);
+  text-decoration: none;
+  transition: all 150ms ease;
+}
+.proof-nav-link:hover {
+  color: var(--emerald);
+  border-color: var(--emerald-border);
+}
+@media (max-width: 980px) {
+  .proof-nav-link { display: none; }
 }

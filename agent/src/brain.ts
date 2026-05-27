@@ -41,14 +41,21 @@ export function getConsensus(votes: AgentVotes): ConsensusDecision {
   const direction =
     counts.LONG >= 2 ? "LONG" : counts.SHORT >= 2 ? "SHORT" : counts.FLAT >= 2 ? "FLAT" : "FLAT";
   const agreeing = all.filter((vote) => vote.direction === direction);
+  const dissenting = all.filter((vote) => vote.direction !== direction);
   const agreeingCount = agreeing.length;
   const leverage =
     agreeingCount > 0
       ? agreeing.reduce((sum, vote) => sum + vote.leverage, 0) / agreeingCount
       : 1;
-  const confidence = Math.round(
-    all.reduce((sum, vote) => sum + vote.confidence, 0) / all.length
-  );
+
+  // Weight: agreeing agents count double, dissenters count half.
+  // Unanimous decisions register higher confidence than split majorities.
+  const numerator =
+    agreeing.reduce((s, v) => s + v.confidence * 2, 0) +
+    dissenting.reduce((s, v) => s + v.confidence * 0.5, 0);
+  const denominator = agreeingCount * 2 + dissenting.length * 0.5;
+  const weighted = denominator > 0 ? numerator / denominator : 0;
+  const confidence = Math.round(Math.min(100, Math.max(0, weighted)));
 
   return {
     direction,

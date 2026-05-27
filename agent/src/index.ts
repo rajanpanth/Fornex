@@ -208,66 +208,61 @@ function printCycle({
   position: CurrentPosition | null;
 }) {
   const navSol = newNavLamports / LAMPORTS_PER_SOL;
+  const txSig = executionSig || logSig;
 
-  printCycleHeader(cycleNumber, time(cycleStartedAt));
-  printSignals(signals);
-  printCollateral(vaultNavSOL, collateral);
-  printVotes(votes);
-  printResult(consensus, executionSig || logSig, navSol);
+  console.log("\n╔══════════════════════════════════════════════╗");
+  console.log("║    FORNEX AUTONOMOUS AGENT v1.0              ║");
+  console.log("║    Solana Devnet  |  Drift Protocol          ║");
+  console.log("╠══════════════════════════════════════════════╣");
+  console.log(
+    `║  🕐 ${time(cycleStartedAt)}  |  Cycle #${cycleNumber
+      .toString()
+      .padStart(4, "0")}                  ║`
+  );
+  console.log("╚══════════════════════════════════════════════╝");
+
+  console.log("┌─ MARKET SIGNALS ──────────────────────────────");
+  console.log(`│  💰 SOL:      $${signals.currentPrice.toFixed(2)}`);
+  console.log(`│  📊 Funding:  ${signals.fundingRate.toFixed(4)}%/hr`);
+  console.log(`│  📈 OI Δ:     ${signed(signals.oiChange)}%`);
+  console.log(`│  ⚖️  L/S:      ${signals.lsRatio.toFixed(3)}`);
+  console.log(`│  🎯 Liq Wall: $${signals.liqWallPrice.toFixed(2)}`);
+  console.log("└───────────────────────────────────────────────");
+
+  console.log("┌─ AGENT VOTES ─────────────────────────────────");
+  console.log(
+    `│  🐂 BULL → ${votes.bull.direction.padEnd(5)} ${votes.bull.leverage}x  (${votes.bull.confidence}%)`
+  );
+  console.log(`│     "${clip(votes.bull.reasoning, 42)}"`);
+  console.log(
+    `│  🐻 BEAR → ${votes.bear.direction.padEnd(5)} ${votes.bear.leverage}x  (${votes.bear.confidence}%)`
+  );
+  console.log(`│     "${clip(votes.bear.reasoning, 42)}"`);
+  console.log(
+    `│  ⚖️  ZEN  → ${votes.zen.direction.padEnd(5)} ${votes.zen.leverage}x  (${votes.zen.confidence}%)`
+  );
+  console.log(`│     "${clip(votes.zen.reasoning, 42)}"`);
+  console.log("└───────────────────────────────────────────────");
+
+  const executed = consensus.shouldExecute && txSig;
+  console.log("┌─ RESULT ──────────────────────────────────────");
+  console.log(
+    `│  ${executed ? "✅" : "⏭️ "} CONSENSUS: ${consensus.direction} ${consensus.leverage}x | conf: ${consensus.confidence}%`
+  );
+  console.log(
+    `│  💼 Collateral: ${collateral.toFixed(4)} SOL (5% of ${vaultNavSOL.toFixed(4)} SOL)`
+  );
+  if (txSig) {
+    console.log(`│  📝 TX: ${shortSig(txSig)}`);
+  }
+  console.log(
+    `│  💸 pay.sh: +0.001 SOL earned${paymentSig ? ` | tx: ${shortSig(paymentSig)}` : ""}`
+  );
+  console.log(`│  📈 Vault NAV: ${navSol.toFixed(4)} SOL`);
+  console.log("└───────────────────────────────────────────────");
+
   if (navSig) console.log(`[agent] NAV tx: ${shortSig(navSig)}`);
   if (navRecordSig) console.log(`[agent] NAV record: ${shortSig(navRecordSig)}`);
-}
-
-function printCycleHeader(cycleNumber: number, timeLabel: string) {
-  console.log("\n╔════════════════════════════════════════════╗");
-  console.log("║     FORNEX AUTONOMOUS AGENT v1.0          ║");
-  console.log("║     Solana Devnet  |  Drift Protocol      ║");
-  console.log("╠════════════════════════════════════════════╣");
-  console.log(`║  🕐  ${timeLabel}  |  Cycle #${cycleNumber.toString().padStart(4, "0")}       ║`);
-  console.log("╚════════════════════════════════════════════╝");
-}
-
-function printSignals(signals: MarketSignals) {
-  console.log("┌─── MARKET SIGNALS ─────────────────────────┐");
-  console.log(`│  💰 SOL Price:    $${signals.currentPrice.toFixed(4).padStart(10)}`);
-  console.log(`│  📊 Funding:      ${signals.fundingRate.toFixed(4)}%/hr`);
-  console.log(`│  📈 OI Change:    ${signals.oiChange.toFixed(2)}%`);
-  console.log(`│  ⚖️  L/S Ratio:    ${signals.lsRatio.toFixed(3)}`);
-  console.log(`│  🎯 Liq Wall:     $${signals.liqWallPrice.toFixed(2)}`);
-  console.log("└────────────────────────────────────────────┘");
-}
-
-function printCollateral(vaultNavSOL: number, collateral: number) {
-  console.log(
-    `│  💼 Collateral: ${collateral.toFixed(4)} SOL (5% of ${vaultNavSOL.toFixed(4)} SOL vault)`
-  );
-}
-
-function printVotes(votes: AgentVotes) {
-  console.log("┌─── AGENT VOTES ─────────────────────────────┐");
-  console.log(`│  🐂 BULL → ${votes.bull.direction.padEnd(6)} ${votes.bull.leverage}x  (${votes.bull.confidence}%)`);
-  console.log(`│     "${votes.bull.reasoning.slice(0, 40)}"`);
-  console.log(`│  🐻 BEAR → ${votes.bear.direction.padEnd(6)} ${votes.bear.leverage}x  (${votes.bear.confidence}%)`);
-  console.log(`│     "${votes.bear.reasoning.slice(0, 40)}"`);
-  console.log(`│  ⚖️  ZEN  → ${votes.zen.direction.padEnd(6)} ${votes.zen.leverage}x  (${votes.zen.confidence}%)`);
-  console.log(`│     "${votes.zen.reasoning.slice(0, 40)}"`);
-  console.log("└─────────────────────────────────────────────┘");
-}
-
-function printResult(
-  consensus: ConsensusDecision,
-  txSig: string | null,
-  navSOL: number
-) {
-  const executed = consensus.shouldExecute && txSig;
-  console.log("┌─── RESULT ──────────────────────────────────┐");
-  console.log(`│  ${executed ? "✅" : "⏭️ "} CONSENSUS: ${consensus.direction} ${consensus.leverage}x | ${consensus.confidence}% conf`);
-  if (txSig) {
-    console.log(`│  📝 On-chain: ${txSig.slice(0, 20)}...`);
-  }
-  console.log("│  💸 pay.sh:   +0.001 SOL earned");
-  console.log(`│  📈 Vault NAV: ${navSOL.toFixed(4)} SOL`);
-  console.log("└─────────────────────────────────────────────┘\n");
 }
 
 function printPausedCycle(cycleStartedAt: Date, cycleNumber: number) {
@@ -276,16 +271,6 @@ function printPausedCycle(cycleStartedAt: Date, cycleNumber: number) {
   console.log(line(` 🕐  ${time(cycleStartedAt)}  |  Cycle #${cycleNumber}`));
   console.log(line(" ⏸️   Trading paused on-chain. Cycle skipped."));
   console.log(`╚${BORDER}╝\n`);
-}
-
-function voteLine(emoji: string, name: string, vote: AgentVotes["bull"]) {
-  return line(
-    ` ${emoji} ${name.padEnd(5)} →  ${vote.direction.padEnd(5)} ${vote.leverage}x  ${vote.confidence}%`
-  );
-}
-
-function reasonLine(reasoning: string) {
-  return line(`     "${clip(reasoning, BOX_WIDTH - 13)}"`);
 }
 
 function line(text: string) {

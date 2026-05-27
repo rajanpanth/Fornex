@@ -300,6 +300,15 @@ export default function AppDashboard() {
           </div>
 
           <div className="app-topbar-right">
+            <a
+              href="/proof"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="proof-nav-link"
+              title="Wall of on-chain evidence"
+            >
+              On-Chain Proof ↗
+            </a>
             <StatusBar level={priorityFee} setLevel={setPriorityFee} />
             {mounted && <WalletMultiButton />}
           </div>

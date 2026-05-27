@@ -4,7 +4,7 @@ import type { MarketSignals } from "./types";
 
 const SOL_PERP_MARKET_INDEX = 0;
 const FUNDING_RATE_PRECISION = 1e9;
-let previousOi: { value: number; timestamp: number } | null = null;
+const oiHistory: Array<{ value: number; ts: number }> = [];
 
 export async function fetchSignals(): Promise<MarketSignals> {
   const timestamp = Date.now();
@@ -123,16 +123,29 @@ function getOpenInterest(perpMarket: any): number {
   return Math.abs(numberFromDrift(base));
 }
 
-function getOiChange(openInterest: number, timestamp: number): number {
-  if (!previousOi) {
-    previousOi = { value: openInterest, timestamp };
-    return 0;
+function getOiChange(openInterest: number, now: number): number {
+  // Add current reading
+  oiHistory.push({ value: openInterest, ts: now });
+
+  // Trim entries older than 24 hours
+  const cutoff = now - 24 * 60 * 60 * 1000;
+  while (oiHistory.length > 0 && oiHistory[0].ts < cutoff) {
+    oiHistory.shift();
   }
-  const oneHourAgo = timestamp - 60 * 60 * 1000;
-  const baseline = previousOi.timestamp <= oneHourAgo ? previousOi.value : previousOi.value;
-  const change = baseline > 0 ? ((openInterest - baseline) / baseline) * 100 : 0;
-  previousOi = { value: openInterest, timestamp };
-  return round(change);
+
+  // Find the most recent reading at least 1 hour old
+  const oneHourAgo = now - 60 * 60 * 1000;
+  let ref = oiHistory[0];
+  for (const entry of oiHistory) {
+    if (entry.ts <= oneHourAgo) {
+      ref = entry;
+    } else {
+      break;
+    }
+  }
+
+  if (!ref || ref.value === 0) return 0;
+  return round(((openInterest - ref.value) / ref.value) * 100);
 }
 
 function getLongShortBase(perpMarket: any) {

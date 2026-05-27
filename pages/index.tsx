@@ -18,6 +18,7 @@ import {
   WalletCards,
 } from "lucide-react";
 import LiveDecisionPreview from "../components/LiveDecisionPreview";
+import HeroLiveTicker from "../components/HeroLiveTicker";
 
 const stats = [
   ["3", "Specialized agents"],
@@ -350,6 +351,13 @@ export default function LandingPage() {
                 <a className="ghost-orbit" href="#proof">
                   Inspect Proof <Sparkles size={17} />
                 </a>
+              </motion.div>
+              <motion.div
+                initial={{ opacity: 0, y: 16 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ duration: 0.85, delay: 0.55, ease: [0.22, 1, 0.36, 1] }}
+              >
+                <HeroLiveTicker />
               </motion.div>
             </div>
             <div className="hero-visual parallax-slow">

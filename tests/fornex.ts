@@ -3,7 +3,7 @@ import { expect } from "chai";
 import { createHash } from "crypto";
 
 const PROGRAM_ID = new anchor.web3.PublicKey(
-  "G9rWuMYMbhVSEavQrEUPAwWGT5xewZEibDBkoWQzTEfw"
+  "H6vbfTp6XwfFSHWtpzjZuyrx6bpnp8Rwt6bVZAUT6vZf"
 );
 
 type AgentVote = {

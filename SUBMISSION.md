@@ -10,12 +10,22 @@ Fornex Protocol is a Solana devnet AI trading vault where users deposit devnet S
 
 | Resource | Link |
 |---|---|
-| Live App | hhttps://fornexlab.vercel.app/ |
-| Demo Video | https://YOUR-DEMO-VIDEO-LINK |
-| GitHub | https://github.com/YOUR_USERNAME/fornex-protocol |
+| Live App | https://fornexlab.vercel.app/ |
+| Demo Video | [TO BE ADDED - recording in progress] |
+| GitHub | https://github.com/rajanpanth/Fornex |
 | Program Explorer | https://explorer.solana.com/address/H6vbfTp6XwfFSHWtpzjZuyrx6bpnp8Rwt6bVZAUT6vZf?cluster=devnet |
 | Vault PDA Explorer | https://explorer.solana.com/address/HMkL7zzAroE919esVY6HSMYzB2ejHM5m4A8JKCSrgBXR?cluster=devnet |
 | $FNRX Mint Explorer | https://explorer.solana.com/address/BNBf6ed4h8dZiVd8wpUkcv8BUyFsp75eidkcUhSb94vj?cluster=devnet |
+
+## Quick Reference
+
+```
+Live App:   https://fornexlab.vercel.app
+Program ID: H6vbfTp6XwfFSHWtpzjZuyrx6bpnp8Rwt6bVZAUT6vZf
+Vault PDA:  HMkL7zzAroE919esVY6HSMYzB2ejHM5m4A8JKCSrgBXR
+$FNRX Mint: BNBf6ed4h8dZiVd8wpUkcv8BUyFsp75eidkcUhSb94vj
+Network:    Solana Devnet
+```
 
 ## Program Addresses
 

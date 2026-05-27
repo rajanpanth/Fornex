@@ -80,7 +80,24 @@ pub fn handler(ctx: Context<Withdraw>, shares_to_burn: u64) -> Result<()> {
         user_key
     );
 
+    emit!(WithdrawEvent {
+        user: user_key,
+        shares_burned: shares_to_burn,
+        sol_returned: sol_out,
+        new_vault_nav: ctx.accounts.vault.nav,
+        timestamp: Clock::get()?.unix_timestamp,
+    });
+
     Ok(())
+}
+
+#[event]
+pub struct WithdrawEvent {
+    pub user: Pubkey,
+    pub shares_burned: u64,
+    pub sol_returned: u64,
+    pub new_vault_nav: u64,
+    pub timestamp: i64,
 }
 
 #[derive(Accounts)]

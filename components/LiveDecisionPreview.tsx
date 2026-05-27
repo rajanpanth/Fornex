@@ -82,14 +82,30 @@ export default function LiveDecisionPreview() {
         </div>
       </div>
 
-      <div className="live-cards">
-        {decisions.map((decision) => (
-          <MiniDecisionCard
-            key={decision.pubkey.toBase58()}
-            decision={decision}
-          />
-        ))}
-      </div>
+      {decisions.length === 0 ? (
+        <div className="live-empty-state">
+          <div className="live-scanning">
+            <span className="scan-dot">●</span>
+            <span className="scan-dot">●</span>
+            <span className="scan-dot">●</span>
+          </div>
+          <p className="live-empty-text">
+            Scanning Solana devnet for decisions…
+          </p>
+          <p className="live-empty-sub">
+            Agent makes a new decision every 15 minutes. Check back shortly.
+          </p>
+        </div>
+      ) : (
+        <div className="live-cards">
+          {decisions.map((decision) => (
+            <MiniDecisionCard
+              key={decision.pubkey.toBase58()}
+              decision={decision}
+            />
+          ))}
+        </div>
+      )}
 
       <a href="/app" className="live-cta">
         View all {count} decisions in the app →

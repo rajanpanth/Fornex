@@ -85,7 +85,24 @@ pub fn handler(ctx: Context<Deposit>, amount: u64) -> Result<()> {
         ctx.accounts.user.key()
     );
 
+    emit!(DepositEvent {
+        user: ctx.accounts.user.key(),
+        amount_lamports: amount,
+        shares_minted: shares_to_mint,
+        new_vault_nav: ctx.accounts.vault.nav,
+        timestamp: clock.unix_timestamp,
+    });
+
     Ok(())
+}
+
+#[event]
+pub struct DepositEvent {
+    pub user: Pubkey,
+    pub amount_lamports: u64,
+    pub shares_minted: u64,
+    pub new_vault_nav: u64,
+    pub timestamp: i64,
 }
 
 #[derive(Accounts)]
