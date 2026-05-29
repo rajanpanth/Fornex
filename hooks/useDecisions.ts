@@ -8,6 +8,7 @@ import {
   decodeDecision,
   PROGRAM_ID,
 } from "../lib/chain";
+import { useDecisionStream } from "./useDecisionStream";
 
 type ApiDecision = Omit<Decision, "pubkey"> & { pubkey: string };
 
@@ -64,6 +65,13 @@ export function useDecisions() {
     const id = setInterval(() => void refresh(), 30_000);
     return () => clearInterval(id);
   }, [refresh]);
+
+  // Live push: any matching program log triggers an immediate refresh.
+  // The polling above stays as a backstop in case the WSS subscription
+  // is unavailable (rate-limit, browser policy, etc).
+  useDecisionStream(() => {
+    void refresh();
+  });
 
   return { decisions, refresh };
 }

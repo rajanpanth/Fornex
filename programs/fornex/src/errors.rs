@@ -49,4 +49,34 @@ pub enum FornexError {
 
     #[msg("Deposit would mint zero vault shares")]
     ZeroShares,
+
+    #[msg("NAV write outside the allowed bounded range")]
+    NavOutOfBounds,
+
+    #[msg("Consensus confidence is below the on-chain execution floor")]
+    ConfidenceBelowFloor,
+
+    #[msg("Per-agent leverage cap exceeded")]
+    LeverageOverCap,
+
+    #[msg("Realized PnL outside acceptable bounds for trade outcome")]
+    PnlOutOfBounds,
+
+    #[msg("Synthetic position is already closed")]
+    PositionAlreadyClosed,
+
+    #[msg("Synthetic position is still open")]
+    PositionStillOpen,
+
+    #[msg("Pyth price update is missing or stale")]
+    PythPriceUnavailable,
+
+    #[msg("Synthetic position size out of bounds")]
+    SyntheticSizeOutOfBounds,
+
+    #[msg("Per-agent reputation counter would exceed executed trade count")]
+    ReputationOverflow,
+
+    #[msg("Strategy mode must be 0 (Momentum), 1 (MeanRevert), or 2 (RangeDCA)")]
+    InvalidStrategyMode,
 }

@@ -1,35 +1,158 @@
 import OpenAI from "openai";
 import { truncateReasoning } from "./config";
-import type { AgentVote, AgentVotes, ConsensusDecision, MarketSignals } from "./types";
+import type { AgentVote, AgentVotes, ConsensusDecision, MarketSignals, StrategyMode } from "./types";
 
 const currentPositionDefault = "NONE";
 
-const SYSTEM_PROMPTS = {
-  bull: `You are BULL, a momentum perp trader on Solana.
-You favor entering trades when momentum is strong.
-You look for: negative funding rate (shorts overcrowded = likely reversal UP), rising open interest (new money entering), long/short ratio below 1.2 (not yet overcrowded long side), price above key levels. You prefer LONG bias. Max leverage 3x.
-Be decisive. When funding is mildly negative or OI is rising, lean LONG with 1.5-2x leverage even if confidence is moderate (55-70%). Sitting flat costs opportunity. Only choose FLAT if signals are clearly contradictory.`,
-  bear: `You are BEAR, a contrarian perp trader on Solana.
-You fade crowded trades and look for reversals.
-You look for: extreme long/short ratio above 1.6 (longs overcrowded = due for squeeze), positive funding (longs overextended and paying), large mark/index spread (price stretched). You prefer SHORT or FLAT. Max leverage 2x.
-Be a real contrarian. If funding is positive even slightly, or L/S is above 1.3, you should lean SHORT. Don't always default to FLAT just because conditions aren't extreme. Protect capital but stay engaged.`,
-  zen: `You are ZEN, a risk-focused perp trader on Solana.
-You only trade when risk/reward is clearly favorable.
-You look for: low volatility entry points, clear liquidation wall as support/resistance, tight mark/index spread (stable), OI not spiking erratically. You prefer FLAT unless setup is pristine. Max leverage 1.5x.
-You are the tiebreaker. When BULL and BEAR disagree, you lean toward whichever side has clearer structural support (liquidation walls, tight spreads). Pick a direction with low leverage when the structure is decent. Reserve FLAT for genuinely chaotic conditions.`,
+/**
+ * Strategy-mode-aware system prompts.
+ *
+ * Each mode is a tuple of three system prompts: BULL, BEAR, ZEN. The agent
+ * selects a mode at the top of every cycle by reading the `VaultStrategy`
+ * PDA on-chain (see `agent/src/strategyMode.ts`) — admin can switch modes
+ * with `set_strategy_mode` and the change is observable on Explorer.
+ *
+ * Modes:
+ *   - momentum   : trend follow with squeeze bias (current default).
+ *   - meanRevert : fade overextensions, weight on mark/index spread + L/S.
+ *   - rangeDCA   : staged entries inside ranges, exit on regime break.
+ */
+const PROMPTS_BY_MODE: Record<StrategyMode, { bull: string; bear: string; zen: string }> = {
+  momentum: {
+    bull: `You are BULL, a momentum perp trader on Solana. Max leverage 3x.
+You favor LONG entries when momentum or mean-reversion conditions are present.
+Decision rules:
+- If funding < 0%/hr OR open-interest change > +5% in 1h → LONG with 1.5–2x leverage and confidence 65–80%.
+- If long/short ratio > 2.0 AND funding > 0% → LONG (squeeze thesis), 1x leverage, confidence 60–70%.
+- If long/short ratio is 1.0–1.6 with rising OI → LONG 1.5x at 60–70%.
+- Reserve FLAT only for genuinely directionless markets where |funding| < 0.005% AND |OI Δ| < 1%.
+Output JSON only, no markdown.`,
+    bear: `You are BEAR, a contrarian perp trader. Max leverage 2x.
+You fade crowded conditions.
+Decision rules:
+- If long/short ratio > 1.6 OR funding > 0.02%/hr → SHORT with 1.5x leverage and confidence 65–80%.
+- If mark/index spread > 0.2% → SHORT (mean-reversion), 1x leverage, confidence 60–70%.
+- Reserve FLAT only when shorts are also crowded (long/short ratio < 0.7).
+You are a real contrarian. Do not default to FLAT.
+Output JSON only, no markdown.`,
+    zen: `You are ZEN, the risk-focused tiebreaker. Max leverage 2x.
+You pick a side when BULL and BEAR disagree, with low leverage.
+Decision rules:
+- In tied or marginal regimes, pick the side with closer liquidation-wall support.
+- Confidence 55–75% on chosen sides.
+- FLAT only when mark/index spread > 1% (genuinely chaotic) OR confidence under 55%.
+Lean toward action with low leverage rather than abstaining.
+Output JSON only, no markdown.`,
+  },
+
+  meanRevert: {
+    bull: `You are BULL operating in MEAN-REVERT mode. Max leverage 2x.
+You buy local lows, not breakouts.
+Decision rules:
+- If mark/index spread < -0.2% (mark cheap to index) → LONG 1.5x at 65–80% confidence.
+- If long/short ratio < 0.7 AND funding < 0% → LONG (squeeze thesis), 1.5x, 60–75%.
+- If price is within 1% of nearest down liquidation wall → LONG 1x at 60–70% (wall as support).
+- FLAT when there's no clear extension to fade (|spread| < 0.05% AND L/S in 0.9–1.1).
+Output JSON only, no markdown.`,
+    bear: `You are BEAR operating in MEAN-REVERT mode. Max leverage 2x.
+You sell local highs.
+Decision rules:
+- If mark/index spread > 0.2% (mark rich to index) → SHORT 1.5x at 65–80% confidence.
+- If long/short ratio > 1.5 AND funding > 0.01%/hr → SHORT 1.5x, 60–75%.
+- Stay BEAR-biased. FLAT only when mark/index spread is symmetric and small.
+Output JSON only, no markdown.`,
+    zen: `You are ZEN in MEAN-REVERT mode. Max leverage 1x.
+You only act on mean-revert signals with strong oracle confirmation.
+Decision rules:
+- If |mark/index spread| > 0.3% AND |L/S deviation from 1.0| > 0.4 → take the contrarian side at 1x, 55–70%.
+- Otherwise FLAT. This regime is conservative by design.
+Output JSON only, no markdown.`,
+  },
+
+  rangeDCA: {
+    bull: `You are BULL operating in RANGE-DCA mode. Max leverage 1.5x.
+You stage long entries in defined ranges, not chase momentum.
+Decision rules:
+- If price is within 2% of nearest down liquidation wall AND funding ≤ 0% → LONG 1x at 60–75%.
+- If price is in the lower half of a tight range (mark/index spread small, L/S near 1) → LONG 1x at 55–65%.
+- FLAT when price is in the upper half of the range or breaking out (avoid chase).
+Output JSON only, no markdown.`,
+    bear: `You are BEAR operating in RANGE-DCA mode. Max leverage 1.5x.
+You stage short entries in the upper half of ranges.
+Decision rules:
+- If price is in the upper half of a tight range AND funding ≥ 0% → SHORT 1x at 55–65%.
+- If long/short ratio > 1.6 with neutral funding → SHORT 1x at 55–70%.
+- FLAT when price is mid-range or breaking down.
+Output JSON only, no markdown.`,
+    zen: `You are ZEN in RANGE-DCA mode. Max leverage 1x.
+You exit (FLAT) on regime breaks, otherwise hold the staged direction.
+Decision rules:
+- If |mark/index spread| > 0.5% AND |OI Δ| > 5% → FLAT (regime break).
+- Otherwise pick the direction matching the side closest to mid-range, 1x, 55–65%.
+Output JSON only, no markdown.`,
+  },
 };
+
+const SYSTEM_PROMPTS = PROMPTS_BY_MODE.momentum; // back-compat for any external import
 
 export async function getAgentVotes(
   signals: MarketSignals,
-  currentPosition = currentPositionDefault
+  currentPosition = currentPositionDefault,
+  mode: StrategyMode = "momentum"
 ): Promise<AgentVotes> {
+  const prompts = PROMPTS_BY_MODE[mode] ?? PROMPTS_BY_MODE.momentum;
   const [bull, bear, zen] = await Promise.all([
-    askAgent("bull", SYSTEM_PROMPTS.bull, signals, currentPosition),
-    askAgent("bear", SYSTEM_PROMPTS.bear, signals, currentPosition),
-    askAgent("zen", SYSTEM_PROMPTS.zen, signals, currentPosition),
+    askAgent("bull", prompts.bull, signals, currentPosition, mode),
+    askAgent("bear", prompts.bear, signals, currentPosition, mode),
+    askAgent("zen", prompts.zen, signals, currentPosition, mode),
   ]);
 
-  return { bull, bear, zen };
+  return applyRegimeGuard({ bull, bear, zen }, signals);
+}
+
+/**
+ * Deterministic prior applied when all three agents return FLAT but the
+ * market is structurally extreme. Documented in README under "Strategy".
+ *
+ * - Crowded longs (L/S > 2.0 or funding > 0.02%/hr) → flip BEAR to SHORT 1.5x.
+ * - Crowded shorts (L/S < 0.6 or funding < -0.02%/hr) → flip BULL to LONG 1.5x.
+ *
+ * This is not a market call; it is a regime guard so the dashboard does not
+ * show 57 unanimous-FLAT cycles when the market is plainly one-sided.
+ */
+function applyRegimeGuard(votes: AgentVotes, signals: MarketSignals): AgentVotes {
+  const allFlat = [votes.bull, votes.bear, votes.zen].every(
+    (v) => v.direction === "FLAT"
+  );
+  if (!allFlat) return votes;
+
+  if (signals.lsRatio > 2.0 || signals.fundingRate > 0.02) {
+    return {
+      ...votes,
+      bear: {
+        direction: "SHORT",
+        leverage: 1.5,
+        confidence: 62,
+        reasoning: truncateReasoning(
+          "Regime guard: crowded longs (L/S high or funding positive) → contrarian SHORT bias."
+        ),
+      },
+    };
+  }
+  if (signals.lsRatio < 0.6 || signals.fundingRate < -0.02) {
+    return {
+      ...votes,
+      bull: {
+        direction: "LONG",
+        leverage: 1.5,
+        confidence: 62,
+        reasoning: truncateReasoning(
+          "Regime guard: crowded shorts → squeeze thesis LONG bias."
+        ),
+      },
+    };
+  }
+  return votes;
 }
 
 export function getConsensus(votes: AgentVotes): ConsensusDecision {
@@ -63,16 +186,19 @@ export function getConsensus(votes: AgentVotes): ConsensusDecision {
     leverage: Math.min(3, Number(leverage.toFixed(2))),
     confidence,
     reasoning: truncateReasoning(`${agreeingCount}/3 agents agree on ${direction}`),
-    shouldExecute: direction !== "FLAT" && confidence > 65,
+    // On-chain confidence floor is 60 (enforced in log_multi_agent_decision).
+    // Off-chain executor uses the same floor so the program never rejects.
+    shouldExecute: direction !== "FLAT" && confidence >= 60,
     agreeingCount,
   };
 }
 
 async function askAgent(
-  name: keyof typeof SYSTEM_PROMPTS,
+  name: keyof typeof PROMPTS_BY_MODE.momentum,
   system: string,
   signals: MarketSignals,
-  currentPosition: string
+  currentPosition: string,
+  mode: StrategyMode
 ): Promise<AgentVote> {
   try {
     const client = createAzureClient();
@@ -83,7 +209,8 @@ async function askAgent(
         { role: "system", content: system },
         {
           role: "user",
-          content: `Market data for SOL-PERP on Drift Protocol:
+          content: `Active strategy mode: ${mode}.
+Market data for SOL-PERP on Drift Protocol:
 - Funding rate: ${signals.fundingRate}% per hour
 - Open interest change (1hr): ${signals.oiChange}%
 - Long/Short ratio: ${signals.lsRatio}
@@ -133,12 +260,13 @@ function createAzureClient(): OpenAI {
   });
 }
 
-function normalizeVote(raw: any, name: keyof typeof SYSTEM_PROMPTS): AgentVote {
+function normalizeVote(raw: any, name: keyof typeof PROMPTS_BY_MODE.momentum): AgentVote {
   const direction =
     raw.direction === "LONG" || raw.direction === "SHORT" || raw.direction === "FLAT"
       ? raw.direction
       : "FLAT";
-  const maxLeverage = name === "zen" ? 1.5 : name === "bear" ? 2 : 3;
+  // On-chain caps: BULL 3x, BEAR 2x, ZEN 2x. Mirror the program limits.
+  const maxLeverage = name === "zen" ? 2 : name === "bear" ? 2 : 3;
 
   return {
     direction,
@@ -147,4 +275,3 @@ function normalizeVote(raw: any, name: keyof typeof SYSTEM_PROMPTS): AgentVote {
     reasoning: truncateReasoning(String(raw.reasoning || "No reasoning provided")),
   };
 }
-

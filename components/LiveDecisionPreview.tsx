@@ -5,13 +5,13 @@ import {
   DECISION_ACCOUNT_SIZE,
   Decision,
   LEGACY_DECISION_ACCOUNT_SIZE,
+  RPC_URL,
   decodeDecision,
   dirLabel,
   formatTimeAgo,
 } from "../lib/chain";
 
 const PROGRAM_ID = "H6vbfTp6XwfFSHWtpzjZuyrx6bpnp8Rwt6bVZAUT6vZf";
-const RPC = "https://api.devnet.solana.com";
 
 export default function LiveDecisionPreview() {
   const [decisions, setDecisions] = useState<Decision[]>([]);
@@ -21,7 +21,7 @@ export default function LiveDecisionPreview() {
   useEffect(() => {
     async function fetchLive() {
       try {
-        const connection = new Connection(RPC, "confirmed");
+        const connection = new Connection(RPC_URL, "confirmed");
         const programId = new PublicKey(PROGRAM_ID);
         const [currentAccounts, legacyAccounts] = await Promise.all([
           connection.getProgramAccounts(programId, {

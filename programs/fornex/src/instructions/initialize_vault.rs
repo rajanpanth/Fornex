@@ -17,6 +17,9 @@ pub fn handler(ctx: Context<InitializeVault>, agent_authority: Pubkey) -> Result
     vault.created_at = clock.unix_timestamp;
     vault.bump = ctx.bumps.vault;
     vault.nav_record_count = 0;
+    vault.executed_trade_count = 0;
+    vault.inception_nav = 0;
+    vault.synthetic_position_count = 0;
 
     msg!("Fornex vault initialized. Agent: {}", agent_authority);
     Ok(())
@@ -40,6 +43,9 @@ pub fn handler_with_mint(
     vault.created_at = clock.unix_timestamp;
     vault.bump = ctx.bumps.vault;
     vault.nav_record_count = 0;
+    vault.executed_trade_count = 0;
+    vault.inception_nav = 0;
+    vault.synthetic_position_count = 0;
 
     msg!(
         "Fornex vault initialized with $FNRX mint {}. Agent: {}",

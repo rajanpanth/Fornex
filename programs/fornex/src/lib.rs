@@ -93,6 +93,59 @@ pub mod fornex {
         instructions::record_nav_snapshot::handler(ctx)
     }
 
+    pub fn record_trade_outcome(
+        ctx: Context<RecordTradeOutcome>,
+        pnl_lamports: i64,
+    ) -> Result<()> {
+        instructions::record_trade_outcome::handler(ctx, pnl_lamports)
+    }
+
+    pub fn open_synthetic_position(
+        ctx: Context<OpenSyntheticPosition>,
+        direction: u8,
+        leverage: u8,
+        collateral_lamports: u64,
+    ) -> Result<()> {
+        instructions::open_synthetic_position::handler(
+            ctx,
+            direction,
+            leverage,
+            collateral_lamports,
+        )
+    }
+
+    pub fn close_synthetic_position(ctx: Context<CloseSyntheticPosition>) -> Result<()> {
+        instructions::close_synthetic_position::handler(ctx)
+    }
+
+    pub fn init_agent_reputation(ctx: Context<InitAgentReputation>) -> Result<()> {
+        instructions::init_agent_reputation::handler(ctx)
+    }
+
+    pub fn update_agent_reputation(
+        ctx: Context<UpdateAgentReputation>,
+        bull_direction: u8,
+        bear_direction: u8,
+        zen_direction: u8,
+        pnl_lamports: i64,
+    ) -> Result<()> {
+        instructions::update_agent_reputation::handler(
+            ctx,
+            bull_direction,
+            bear_direction,
+            zen_direction,
+            pnl_lamports,
+        )
+    }
+
+    pub fn init_vault_strategy(ctx: Context<InitVaultStrategy>, mode: u8) -> Result<()> {
+        instructions::init_vault_strategy::handler(ctx, mode)
+    }
+
+    pub fn set_strategy_mode(ctx: Context<SetStrategyMode>, mode: u8) -> Result<()> {
+        instructions::set_strategy_mode::handler(ctx, mode)
+    }
+
     pub fn emergency_pause(ctx: Context<EmergencyPause>) -> Result<()> {
         instructions::emergency_pause::pause(ctx)
     }

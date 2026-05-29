@@ -45,7 +45,27 @@ export function loadAgentKeypair(): Keypair {
   return Keypair.fromSecretKey(bs58.decode(encoded));
 }
 
+/**
+ * Treasury keypair funds the streaming pay.sh micropayments.
+ * It is a separate wallet from the agent so that "agent earnings" are real
+ * SOL transferred from a third-party account, not a self-transfer.
+ *
+ * On devnet, generate once with:
+ *   solana-keygen new --no-bip39-passphrase -o /tmp/treasury.json
+ *   solana airdrop 5 <treasury-pubkey> --url devnet
+ * Then store the bs58 private key as FORNEX_TREASURY_KEYPAIR in agent/.env.
+ *
+ * If unset, we fall back to the agent keypair (legacy behaviour) but log a
+ * loud warning so it's visible in the dashboard cost panel.
+ */
+export function loadTreasuryKeypair(): { keypair: Keypair; isTreasury: boolean } {
+  const encoded = process.env.FORNEX_TREASURY_KEYPAIR;
+  if (!encoded) {
+    return { keypair: loadAgentKeypair(), isTreasury: false };
+  }
+  return { keypair: Keypair.fromSecretKey(bs58.decode(encoded)), isTreasury: true };
+}
+
 export function truncateReasoning(value: string): string {
   return value.replace(/\s+/g, " ").trim().slice(0, 180);
 }
-

@@ -57,6 +57,9 @@ import ToastContainer, { useToasts } from "../components/Toast";
 import StatusBar from "../components/StatusBar";
 import WalletDisconnected from "../components/WalletDisconnected";
 import RiskStatusCard from "../components/RiskStatusCard";
+import AgentReputationCard from "../components/AgentReputationCard";
+import StrategyModeBadge from "../components/StrategyModeBadge";
+import RiskDashboard from "../components/RiskDashboard";
 
 // Lazy import keeps the initial paint snappy and avoids running its RPC fetch in SSR.
 const TrustStripLazy = dynamic(() => import("../components/TrustStrip"), {
@@ -75,12 +78,13 @@ export default function AppDashboard() {
   const [fnrxBalance, setFnrxBalance] = useState<number | null>(null);
   const [newDecisionAlert, setNewDecisionAlert] = useState(false);
   const [mobileTab, setMobileTab] = useState<"vault" | "feed" | "trade" | "stats">("vault");
+  const [statsTab, setStatsTab] = useState<"stats" | "risk" | "performance">("stats");
   const { level: priorityFee, setLevel: setPriorityFee, currentFee } = usePriorityFee();
 
   useEffect(() => { setMounted(true); }, []);
 
   // Hooks
-  const { vault, nav, trades, winRate, refresh } = useVault();
+  const { vault, nav, trades, executedTrades, winRate, inceptionNavSol, refresh } = useVault();
   const { decisions, refresh: refreshDecisions } = useDecisions();
   const { userDeposit, userSharesSol, userPnlPct } = usePosition(vault);
   const { toasts, addToast, removeToast } = useToasts();
@@ -352,19 +356,25 @@ export default function AppDashboard() {
                   onSubmit={sendVaultIx}
                   nav={nav}
                   userSharesRaw={userDeposit?.shares ?? 0n}
+                  priorityFee={priorityFee}
+                  setPriorityFee={setPriorityFee}
+                  currentFee={currentFee}
                 />
               ) : (
                 <WalletDisconnected />
               )}
               <PositionPanel />
               <RiskStatusCard vault={vault} />
+              <StrategyModeBadge />
             </div>
             <div className={`mobile-panel mobile-vault ${mobileTab === "vault" ? "active" : ""}`}>
               <VaultStats
                 vault={vault}
                 nav={nav}
                 trades={trades}
+                executedTrades={executedTrades}
                 winRate={winRate}
+                inceptionNavSol={inceptionNavSol}
                 userSharesSol={userSharesSol}
                 userPnlPct={userPnlPct}
                 userDeposit={userDeposit}
@@ -380,10 +390,56 @@ export default function AppDashboard() {
 
           {/* RIGHT COLUMN */}
           <div className={`app-col-right mobile-panel mobile-stats ${mobileTab === "stats" ? "active" : ""}`}>
-            <AgentEarnings trades={trades} winRate={winRate} cycle={cycle} />
-            <AgentPerformanceChart decisions={decisions} />
-            <EquityCurve vault={vault} />
-            <StrategyOrdersPanel latestDecision={decisions[0] ?? null} />
+            <div className="stats-tabs" role="tablist" aria-label="Right column sections">
+              {([
+                ["stats", "Stats", BarChart3],
+                ["risk", "Risk", ShieldCheck],
+                ["performance", "Performance", BrainCircuit],
+              ] as const).map(([key, label, Icon]) => (
+                <button
+                  key={key}
+                  role="tab"
+                  aria-selected={statsTab === key}
+                  className={`stats-tab ${statsTab === key ? "is-active" : ""}`}
+                  onClick={() => setStatsTab(key)}
+                  type="button"
+                >
+                  <Icon size={13} />
+                  {label}
+                </button>
+              ))}
+            </div>
+
+            {/* Stats — agent earnings + reputation + latest signal */}
+            <div
+              className="stats-pane"
+              role="tabpanel"
+              hidden={statsTab !== "stats"}
+            >
+              <AgentEarnings trades={trades} executedTrades={executedTrades} winRate={winRate} cycle={cycle} />
+              <AgentReputationCard />
+              <StrategyOrdersPanel latestDecision={decisions[0] ?? null} />
+            </div>
+
+            {/* Risk — drawdown / HWM / streak / Sharpe-like + equity curve */}
+            <div
+              className="stats-pane"
+              role="tabpanel"
+              hidden={statsTab !== "risk"}
+            >
+              <RiskDashboard />
+              <EquityCurve vault={vault} />
+            </div>
+
+            {/* Performance — agent decision distribution + equity curve */}
+            <div
+              className="stats-pane"
+              role="tabpanel"
+              hidden={statsTab !== "performance"}
+            >
+              <AgentPerformanceChart decisions={decisions} />
+              <EquityCurve vault={vault} />
+            </div>
           </div>
         </div>
 

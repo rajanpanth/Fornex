@@ -31,7 +31,8 @@ describe("fornex", () => {
 
   const zero = new anchor.BN(0);
   const oneSol = new anchor.BN(anchor.web3.LAMPORTS_PER_SOL);
-  const updatedNav = new anchor.BN(anchor.web3.LAMPORTS_PER_SOL + 250_000_000);
+  // Stay within the ±10% NAV cap from oneSol → 1.05 SOL is a +5% update.
+  const updatedNav = new anchor.BN(anchor.web3.LAMPORTS_PER_SOL + 50_000_000);
   const withdrawShares = new anchor.BN(500_000_000);
 
   const [vault] = anchor.web3.PublicKey.findProgramAddressSync(
@@ -45,7 +46,7 @@ describe("fornex", () => {
   );
 
   const [firstDecision] = anchor.web3.PublicKey.findProgramAddressSync(
-    [Buffer.from("trade_log"), vault.toBuffer(), u32(1)],
+    [Buffer.from("decision"), vault.toBuffer(), u32(1)],
     PROGRAM_ID
   );
 
@@ -174,7 +175,115 @@ describe("fornex", () => {
     const vaultAccount = await fetchVault();
 
     expect(vaultAccount.nav.eq(updatedNav)).to.equal(true);
+    // winning_trades is no longer incremented by update_nav (deposits ≠ wins).
+    expect(vaultAccount.winningTrades).to.equal(0);
+  });
+
+  it("rejects NAV writes outside the ±cap", async () => {
+    const tooHigh = updatedNav.muln(2); // +100% in one update
+    let rejected = false;
+    try {
+      await sendInstruction(
+        [discriminator("global", "update_nav"), u64(tooHigh)],
+        [writable(vault), signer(agent.publicKey, true)],
+        [agent]
+      );
+    } catch {
+      rejected = true;
+    }
+    expect(rejected).to.equal(true);
+  });
+
+  it("records a trade outcome and increments wins on positive PnL", async () => {
+    const pnlLamports = new anchor.BN(1_500_000); // +0.0015 SOL
+    await sendInstruction(
+      [
+        discriminator("global", "record_trade_outcome"),
+        i64(pnlLamports),
+      ],
+      [writable(vault), signer(agent.publicKey, true)],
+      [agent]
+    );
+
+    const vaultAccount = await fetchVault();
+    expect(vaultAccount.executedTradeCount).to.equal(1);
     expect(vaultAccount.winningTrades).to.equal(1);
+  });
+
+  it("rejects an executed decision with confidence below the on-chain floor", async () => {
+    const [secondDecision] = anchor.web3.PublicKey.findProgramAddressSync(
+      [Buffer.from("decision"), vault.toBuffer(), u32(2)],
+      PROGRAM_ID
+    );
+    const lowConfBull = vote(1, 2, 50, "low conf bull");
+    const lowConfBear = vote(0, 1, 50, "low conf bear");
+    const lowConfZen = vote(1, 1, 50, "low conf zen");
+    const lowConfConsensus = vote(1, 2, 50, "low conf consensus");
+
+    let rejected = false;
+    try {
+      await sendInstruction(
+        [
+          discriminator("global", "log_multi_agent_decision"),
+          borshString("SOL-PERP"),
+          encodeVote(lowConfBull),
+          encodeVote(lowConfBear),
+          encodeVote(lowConfZen),
+          encodeVote(lowConfConsensus),
+          u64(new anchor.BN(250_000_000)),
+          Buffer.from([1]), // executed = true with confidence 50 → must reject
+          borshString("rejected-tx"),
+        ],
+        [
+          writable(vault),
+          writable(secondDecision),
+          signer(agent.publicKey, true),
+          readonly(anchor.web3.SystemProgram.programId),
+        ],
+        [agent]
+      );
+    } catch {
+      rejected = true;
+    }
+    expect(rejected).to.equal(true);
+  });
+
+  it("rejects per-agent leverage caps (BEAR > 2x)", async () => {
+    const [thirdDecision] = anchor.web3.PublicKey.findProgramAddressSync(
+      [Buffer.from("decision"), vault.toBuffer(), u32(2)],
+      PROGRAM_ID
+    );
+    const bullVote = vote(1, 2, 70, "bull ok");
+    const bearOver = vote(2, 5, 70, "bear too levered"); // 5x > 2x cap
+    const zenVote = vote(1, 1, 70, "zen ok");
+    const consensus = vote(1, 2, 70, "consensus");
+
+    let rejected = false;
+    try {
+      await sendInstruction(
+        [
+          discriminator("global", "log_multi_agent_decision"),
+          borshString("SOL-PERP"),
+          encodeVote(bullVote),
+          encodeVote(bearOver),
+          encodeVote(zenVote),
+          encodeVote(consensus),
+          u64(new anchor.BN(250_000_000)),
+          Buffer.from([0]),
+          borshString(""),
+        ],
+        [
+          writable(vault),
+          writable(thirdDecision),
+          signer(agent.publicKey, true),
+          readonly(anchor.web3.SystemProgram.programId),
+        ],
+        [agent]
+      );
+    } catch {
+      rejected = true;
+    }
+    expect(rejected).to.equal(true);
   });
 
   it("withdraws shares and returns proportional SOL", async () => {
@@ -255,6 +364,9 @@ describe("fornex", () => {
       isTradingPaused: reader.bool(),
       createdAt: reader.i64(),
       bump: reader.u8(),
+      navRecordCount: reader.u64(),
+      executedTradeCount: reader.u32(),
+      inceptionNav: reader.u64(),
     };
   }
 
@@ -384,6 +496,10 @@ function u32(value: number): Buffer {
 
 function u64(value: anchor.BN): Buffer {
   return value.toArrayLike(Buffer, "le", 8);
+}
+
+function i64(value: anchor.BN): Buffer {
+  return value.toTwos(64).toArrayLike(Buffer, "le", 8);
 }
 
 function borshString(value: string): Buffer {

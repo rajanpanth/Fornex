@@ -8,7 +8,9 @@ export default function VaultStats({
   vault,
   nav,
   trades,
+  executedTrades,
   winRate,
+  inceptionNavSol,
   userSharesSol,
   userPnlPct,
   userDeposit,
@@ -17,7 +19,9 @@ export default function VaultStats({
   vault: VaultData | null;
   nav: number;
   trades: number;
-  winRate: number;
+  executedTrades: number;
+  winRate: number | null;
+  inceptionNavSol: number;
   userSharesSol: number;
   userPnlPct: number | null;
   userDeposit: { shares: bigint; totalDeposited: bigint } | null;
@@ -27,7 +31,11 @@ export default function VaultStats({
     userDeposit && userPnlPct !== null
       ? userSharesSol - Number(userDeposit.totalDeposited) / LAMPORTS_PER_SOL
       : 0;
-  const navChangePct = ((nav - 10) / 10) * 100;
+
+  // Since-inception change uses the on-chain inception_nav stamped on the
+  // first deposit. No hardcoded baseline. Renders nothing when unavailable.
+  const navChangePct: number | null =
+    inceptionNavSol > 0 ? ((nav - inceptionNavSol) / inceptionNavSol) * 100 : null;
 
   return (
     <div className="vault-stats-panel">
@@ -40,10 +48,14 @@ export default function VaultStats({
           <CircleDollarSign size={17} className="vault-stat-icon" />
           <div className="vault-stat-label">Vault NAV</div>
           <div className="vault-stat-value">{nav.toFixed(3)} SOL</div>
-          <div className={`vault-stat-sub ${navChangePct >= 0 ? "up" : "down"}`}>
-            {navChangePct >= 0 ? "+" : ""}
-            {navChangePct.toFixed(1)}%
-          </div>
+          {navChangePct === null ? (
+            <div className="vault-stat-sub neutral">since inception</div>
+          ) : (
+            <div className={`vault-stat-sub ${navChangePct >= 0 ? "up" : "down"}`}>
+              {navChangePct >= 0 ? "+" : ""}
+              {navChangePct.toFixed(1)}% since inception
+            </div>
+          )}
         </div>
 
         <div className="vault-stat-box">
@@ -93,13 +105,17 @@ export default function VaultStats({
         <div className="vault-stat-box">
           <Percent size={17} className="vault-stat-icon" />
           <div className="vault-stat-label">Win Rate</div>
-          <div className="vault-stat-value">{winRate}%</div>
-          <div className="vault-stat-sub neutral">{trades} trades</div>
+          <div className="vault-stat-value">
+            {winRate === null ? "—" : `${winRate}%`}
+          </div>
+          <div className="vault-stat-sub neutral">
+            {executedTrades} executed {executedTrades === 1 ? "trade" : "trades"}
+          </div>
         </div>
 
         <div className="vault-stat-box">
           <BarChart3 size={17} className="vault-stat-icon" />
-          <div className="vault-stat-label">Trade Count</div>
+          <div className="vault-stat-label">Decisions</div>
           <div className="vault-stat-value">{trades}</div>
           <div className="vault-stat-sub neutral">on-chain decisions</div>
         </div>

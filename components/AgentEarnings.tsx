@@ -3,17 +3,21 @@ import { Coins } from "lucide-react";
 
 export default function AgentEarnings({
   trades,
+  executedTrades,
   winRate,
   cycle,
 }: {
   trades: number;
-  winRate: number;
+  executedTrades: number;
+  winRate: number | null;
   cycle: { label: string; progress: number; thinking: boolean };
 }) {
-  const targetEarnings = useMemo(() => trades * 0.001, [trades]);
+  // pay.sh streams 0.001 SOL per executed trade. Earnings are now anchored to
+  // executed_trade_count from the on-chain Vault, not raw decision count.
+  const targetEarnings = useMemo(() => executedTrades * 0.001, [executedTrades]);
   const [displayed, setDisplayed] = useState(0);
   const [flash, setFlash] = useState(false);
-  const prevTradesRef = useRef(trades);
+  const prevTradesRef = useRef(executedTrades);
   const animRef = useRef<number | null>(null);
 
   // Animate earnings counter
@@ -34,12 +38,11 @@ export default function AgentEarnings({
 
     animRef.current = requestAnimationFrame(animate);
 
-    // Flash on new trade
-    if (trades > prevTradesRef.current) {
+    if (executedTrades > prevTradesRef.current) {
       setFlash(true);
       setTimeout(() => setFlash(false), 400);
     }
-    prevTradesRef.current = trades;
+    prevTradesRef.current = executedTrades;
 
     return () => {
       if (animRef.current) cancelAnimationFrame(animRef.current);
@@ -59,7 +62,7 @@ export default function AgentEarnings({
       <div className={`earnings-big${flash ? " flash" : ""}`}>
         {displayed.toFixed(3)} SOL
       </div>
-      <div className="earnings-sub">earned by agent via pay.sh</div>
+      <div className="earnings-sub">streamed treasury → agent via pay.sh</div>
 
       <div className="earnings-rows">
         <div className="earnings-row">
@@ -67,12 +70,16 @@ export default function AgentEarnings({
           <span className="earnings-row-val">0.001 SOL/trade</span>
         </div>
         <div className="earnings-row">
-          <span className="earnings-row-label">Total trades</span>
+          <span className="earnings-row-label">Executed trades</span>
+          <span className="earnings-row-val">{executedTrades}</span>
+        </div>
+        <div className="earnings-row">
+          <span className="earnings-row-label">Total decisions</span>
           <span className="earnings-row-val">{trades}</span>
         </div>
         <div className="earnings-row">
           <span className="earnings-row-label">Win rate</span>
-          <span className="earnings-row-val">{winRate}%</span>
+          <span className="earnings-row-val">{winRate === null ? "—" : `${winRate}%`}</span>
         </div>
       </div>
 

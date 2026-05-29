@@ -63,6 +63,12 @@ pub fn handler(ctx: Context<Deposit>, amount: u64) -> Result<()> {
         .checked_add(amount)
         .ok_or(FornexError::MathOverflow)?;
 
+    // Stamp inception NAV on the first deposit so the dashboard can compute
+    // a verifiable since-inception change instead of using a hardcoded baseline.
+    if vault.inception_nav == 0 {
+        vault.inception_nav = vault.nav;
+    }
+
     if user_deposit.deposited_at == 0 {
         user_deposit.owner = ctx.accounts.user.key();
         user_deposit.vault = ctx.accounts.vault.key();

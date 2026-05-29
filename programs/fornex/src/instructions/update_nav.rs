@@ -13,8 +13,10 @@ pub fn handler(ctx: Context<UpdateNav>, new_nav: u64) -> Result<()> {
 
     let old_nav = vault.nav;
 
-    // Prevent catastrophic NAV manipulation:
-    // cap drawdown at 25% per single update once the vault is established
+    // Bounded NAV writes — both directions — to prevent share-price oracle abuse.
+    // Cap drawdown at 25% per single update once the vault is established.
+    // Cap upside at 10% per single update so an attacker who steals the agent
+    // key cannot inflate NAV to mint near-zero shares for a victim depositor.
     if vault.nav > 0 && vault.total_shares > 0 {
         let floor = vault
             .nav
@@ -22,7 +24,16 @@ pub fn handler(ctx: Context<UpdateNav>, new_nav: u64) -> Result<()> {
             .ok_or(FornexError::MathOverflow)?
             .checked_div(100)
             .ok_or(FornexError::MathOverflow)?;
-        require!(new_nav >= floor, FornexError::ZeroNav);
+        let ceil = vault
+            .nav
+            .checked_mul(110)
+            .ok_or(FornexError::MathOverflow)?
+            .checked_div(100)
+            .ok_or(FornexError::MathOverflow)?;
+        require!(
+            new_nav >= floor && new_nav <= ceil,
+            FornexError::NavOutOfBounds
+        );
     }
 
     // Minimum NAV floor while shares exist (prevent division-by-zero on next deposit)
@@ -30,11 +41,9 @@ pub fn handler(ctx: Context<UpdateNav>, new_nav: u64) -> Result<()> {
         require!(new_nav >= 1000, FornexError::ZeroNav);
     }
 
-    if new_nav > old_nav && vault.trade_count > 0 {
-        vault.winning_trades = vault.winning_trades
-            .checked_add(1)
-            .ok_or(FornexError::MathOverflow)?;
-    }
+    // NOTE: winning_trades is no longer incremented here. NAV ticks up on every
+    // deposit, so this conflated user inflows with realized trade wins. Wins
+    // are now recorded by `record_trade_outcome` after a position is closed.
 
     vault.nav = new_nav;
 

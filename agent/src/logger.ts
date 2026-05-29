@@ -25,7 +25,7 @@ export async function logDecisionOnChain(
     const vault = await fetchVault();
     const decisionIndex = vault.tradeCount + 1;
     const [decision] = PublicKey.findProgramAddressSync(
-      [Buffer.from("trade_log"), VAULT_ADDRESS.toBuffer(), u32(decisionIndex)],
+      [Buffer.from("decision"), VAULT_ADDRESS.toBuffer(), u32(decisionIndex)],
       PROGRAM_ID
     );
 
@@ -65,6 +65,83 @@ export async function updateNavOnChain(newNavLamports: number): Promise<string |
     const tx = await sendIx(data, [writable(VAULT_ADDRESS), signer(agent().publicKey)], "update nav");
     await recordNavSnapshot();
     return tx;
+  });
+}
+
+/**
+ * Record the realized outcome of a closed trade on-chain. Increments
+ * executed_trade_count unconditionally and winning_trades only on positive PnL.
+ * Replaces the old behaviour where update_nav misattributed deposits as wins.
+ */
+export async function recordTradeOutcomeOnChain(
+  pnlLamports: number
+): Promise<string | null> {
+  return retry("recordTradeOutcomeOnChain", async () => {
+    const data = Buffer.concat([
+      discriminator("global", "record_trade_outcome"),
+      i64(new BN(Math.round(pnlLamports))),
+    ]);
+    return sendIx(
+      data,
+      [writable(VAULT_ADDRESS), signer(agent().publicKey)],
+      "record trade outcome"
+    );
+  });
+}
+
+/**
+ * Update the per-agent reputation PDA after a trade settles.
+ *
+ * The PDA at ["agent_reputation", vault] is created once via
+ * `init_agent_reputation`. If the account doesn't exist yet (program
+ * upgraded but admin hasn't initialized the PDA), the call is a no-op
+ * with a warning — the close path still completes. This keeps existing
+ * deployments compatible without forcing an admin migration before the
+ * agent can settle a trade.
+ *
+ * `directionToNumber` is shared with `encodeVote` so the votes recorded
+ * in the MultiAgentDecision PDA and those scored here always agree.
+ */
+export async function updateAgentReputationOnChain(
+  votes: AgentVotes,
+  pnlLamports: number
+): Promise<string | null> {
+  const [agentReputation] = PublicKey.findProgramAddressSync(
+    [Buffer.from("agent_reputation"), VAULT_ADDRESS.toBuffer()],
+    PROGRAM_ID
+  );
+
+  // Skip when the PDA hasn't been initialized yet. We do this check
+  // once (no retry loop) so a missing PDA can't burn the cycle budget.
+  const repInfo = await connection.getAccountInfo(agentReputation);
+  if (!repInfo) {
+    console.warn(
+      "[reputation] AgentReputation PDA not found at " +
+        agentReputation.toBase58() +
+        " — run admin `init_agent_reputation` to enable per-agent stats."
+    );
+    return null;
+  }
+
+  return retry("updateAgentReputationOnChain", async () => {
+    const data = Buffer.concat([
+      discriminator("global", "update_agent_reputation"),
+      Buffer.from([
+        directionToNumber(votes.bull.direction),
+        directionToNumber(votes.bear.direction),
+        directionToNumber(votes.zen.direction),
+      ]),
+      i64(new BN(Math.round(pnlLamports))),
+    ]);
+    return sendIx(
+      data,
+      [
+        readonly(VAULT_ADDRESS),
+        writable(agentReputation),
+        signer(agent().publicKey),
+      ],
+      "update agent reputation"
+    );
   });
 }
 
@@ -128,6 +205,9 @@ export async function fetchVault(): Promise<{
   winningTrades: number;
   isTradingPaused: boolean;
   navRecordCount: BN;
+  executedTradeCount: number;
+  inceptionNav: BN;
+  syntheticPositionCount: number;
 }> {
   const accountInfo = await connection.getAccountInfo(VAULT_ADDRESS);
   if (!accountInfo) throw new Error(`Vault not found: ${VAULT_ADDRESS.toBase58()}`);
@@ -145,7 +225,17 @@ export async function fetchVault(): Promise<{
   };
   reader.i64();
   reader.u8();
-  return { ...decoded, navRecordCount: reader.u64() };
+  const navRecordCount = reader.optionalU64() ?? new BN(0);
+  const executedTradeCount = reader.optionalU32() ?? 0;
+  const inceptionNav = reader.optionalU64() ?? new BN(0);
+  const syntheticPositionCount = reader.optionalU32() ?? 0;
+  return {
+    ...decoded,
+    navRecordCount,
+    executedTradeCount,
+    inceptionNav,
+    syntheticPositionCount,
+  };
 }
 
 async function retry<T>(label: string, fn: () => Promise<T>): Promise<T | null> {
@@ -213,6 +303,10 @@ function u64(value: BN): Buffer {
   return value.toArrayLike(Buffer, "le", 8);
 }
 
+function i64(value: BN): Buffer {
+  return value.toTwos(64).toArrayLike(Buffer, "le", 8);
+}
+
 function borshString(value: string): Buffer {
   const bytes = Buffer.from(value, "utf8");
   return Buffer.concat([u32(bytes.length), bytes]);
@@ -254,10 +348,18 @@ class Reader {
     this.offset += 4;
     return value;
   }
+  optionalU32(): number | null {
+    if (this.offset + 4 > this.data.length) return null;
+    return this.u32();
+  }
   u64(): BN {
     const value = new BN(this.data.subarray(this.offset, this.offset + 8), "le");
     this.offset += 8;
     return value;
+  }
+  optionalU64(): BN | null {
+    if (this.offset + 8 > this.data.length) return null;
+    return this.u64();
   }
   i64(): BN {
     return this.u64();

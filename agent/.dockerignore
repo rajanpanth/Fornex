@@ -1,0 +1,16 @@
+.env
+.env.local
+.env.*.local
+node_modules
+npm-debug.log
+.DS_Store
+Thumbs.db
+*.log
+
+# pm2 state — the container manages its own lifecycle
+.pm2/
+ecosystem.config.js
+
+# editor
+.vscode/
+.idea/

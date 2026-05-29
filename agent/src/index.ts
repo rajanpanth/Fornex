@@ -2,21 +2,30 @@ import { LAMPORTS_PER_SOL } from "@solana/web3.js";
 import { getAgentVotes, getConsensus } from "./brain";
 import {
   closePosition,
+  executorName,
   getCurrentPosition,
-  getVaultPnL,
   initExecutor,
   openPosition,
   shutdownExecutor,
-} from "./executor";
+} from "./executors";
 import {
   fetchVault,
   logDecisionOnChain,
+  recordTradeOutcomeOnChain,
   syncVaultNav,
+  updateAgentReputationOnChain,
   updateNavOnChain,
 } from "./logger";
 import { payAgentForTrade } from "./paysh";
 import { fetchSignals } from "./signals";
-import type { AgentVotes, ConsensusDecision, CurrentPosition, MarketSignals } from "./types";
+import { fetchStrategyMode } from "./strategyMode";
+import type {
+  AgentVotes,
+  ConsensusDecision,
+  CurrentPosition,
+  Direction,
+  MarketSignals,
+} from "./types";
 
 const LOOP_MS = 900_000;
 const SINGLE_CYCLE =
@@ -27,6 +36,17 @@ const MAX_COLLATERAL_SOL = 1.0;
 const MIN_NAV_LAMPORTS = 1_000_000;
 const BOX_WIDTH = 55;
 const BORDER = "═".repeat(BOX_WIDTH);
+
+// Optional manual override for the demo. Set FORNEX_FORCE_DIRECTION=LONG or
+// =SHORT in the agent env to force the next cycle to execute that direction
+// regardless of consensus. Documented in DEMO_SCRIPT.md.
+const FORCED_DIRECTION = (process.env.FORNEX_FORCE_DIRECTION as Direction | undefined) || undefined;
+
+// FORNEX_FORCE_CLOSE=1 closes any open position regardless of consensus.
+// Used during demo-baking to settle synthetic positions and surface real
+// realized-PnL deltas in the on-chain win-rate counters.
+const FORCE_CLOSE = process.env.FORNEX_FORCE_CLOSE === "1";
+
 let running = false;
 let cycleNumber = 0;
 
@@ -59,10 +79,13 @@ async function runCycle(): Promise<void> {
       ? `${position.direction} ${position.leverage || 1}x`
       : "NONE";
 
+    const strategyMode =
+      (await safeStep("fetch strategy mode", fetchStrategyMode, 30_000)) ?? "momentum";
+
     const votes =
       (await safeStep(
         "collect agent votes",
-        () => getAgentVotes(signals, positionLabel),
+        () => getAgentVotes(signals, positionLabel, strategyMode),
         75_000
       )) ?? fallbackVotes("AI vote timeout; defaulting flat");
 
@@ -71,40 +94,91 @@ async function runCycle(): Promise<void> {
     let executionSig: string | null = null;
     let paymentSig: string | null = null;
     let logSig: string | null = null;
-    const tradeDirection = consensus.direction;
+    let realizedPnLLamports = 0;
 
-    if (consensus.shouldExecute && !position && tradeDirection !== "FLAT") {
-      executionSig = await safeStep("execute Drift order", () =>
-        openPosition(tradeDirection, consensus.leverage, collateral)
+    const tradeDirection: Direction = FORCED_DIRECTION ?? consensus.direction;
+    // Synthetic executor is always live. Drift executor honors DRIFT_SKIP_EXECUTION.
+    const driftBlocked =
+      executorName === "drift" && process.env.DRIFT_SKIP_EXECUTION !== "0";
+    const shouldExecute = FORCED_DIRECTION
+      ? tradeDirection !== "FLAT" && !driftBlocked
+      : consensus.shouldExecute && !driftBlocked;
+
+    if (FORCED_DIRECTION && driftBlocked) {
+      console.log(
+        `[agent] FORNEX_FORCE_DIRECTION=${FORCED_DIRECTION} ignored: ` +
+          "Drift executor is gated by DRIFT_SKIP_EXECUTION."
+      );
+    } else if (FORCED_DIRECTION) {
+      console.log(`[agent] FORNEX_FORCE_DIRECTION=${FORCED_DIRECTION} — overriding consensus`);
+    }
+    console.log(`[agent] executor: ${executorName}`);
+
+    if (shouldExecute && !position && tradeDirection !== "FLAT") {
+      executionSig = await safeStep("open position", () =>
+        openPosition(tradeDirection as Exclude<Direction, "FLAT">, consensus.leverage, collateral)
       , 60_000);
+      // Use the consensus object for logging so the on-chain decision matches
+      // what would have executed without the override. Override is purely for
+      // manual demo execution; the AI vote breakdown remains honest.
+      const consensusForLog: ConsensusDecision = FORCED_DIRECTION
+        ? { ...consensus, direction: FORCED_DIRECTION, confidence: Math.max(consensus.confidence, 60), shouldExecute: true }
+        : consensus;
       logSig = await safeStep("log decision on-chain", () =>
-        logDecisionOnChain(votes, consensus, Boolean(executionSig), executionSig)
+        logDecisionOnChain(votes, consensusForLog, Boolean(executionSig), executionSig)
       , 60_000);
       if (executionSig) {
         paymentSig = await safeStep("track pay.sh payment", payAgentForTrade, 45_000);
       }
-    } else if (consensus.direction === "FLAT" && position) {
-      const close = await safeStep("close Drift position", closePosition, 60_000);
+    } else if ((consensus.direction === "FLAT" || FORCE_CLOSE) && position) {
+      const close = await safeStep("close position", closePosition, 60_000);
       executionSig = close?.txSig || null;
+      realizedPnLLamports = Math.round((close?.realizedPnl ?? 0) * LAMPORTS_PER_SOL);
       logSig = await safeStep("log decision on-chain", () =>
         logDecisionOnChain(votes, consensus, Boolean(executionSig), executionSig)
       , 60_000);
+      // For Drift adapter, record_trade_outcome is called separately. For the
+      // Synthetic adapter, close_synthetic_position already bumps the vault
+      // counters atomically, so we skip the second on-chain call.
+      if (executionSig && executorName !== "synthetic") {
+        await safeStep("record trade outcome", () =>
+          recordTradeOutcomeOnChain(realizedPnLLamports)
+        , 45_000);
+      }
+      // Per-agent reputation update is a separate, idempotent CPI-free
+      // call that's safe to make on every close regardless of executor.
+      // The PDA may not exist on older deployments — the helper handles
+      // that with a logged no-op.
+      if (executionSig) {
+        await safeStep("update agent reputation", () =>
+          updateAgentReputationOnChain(votes, realizedPnLLamports)
+        , 45_000);
+        paymentSig = await safeStep("track pay.sh payment", payAgentForTrade, 45_000);
+      }
     } else {
       logSig = await safeStep("log decision on-chain", () =>
         logDecisionOnChain(votes, consensus, false, null)
       , 60_000);
     }
 
-    const realizedPnLSOL = (await safeStep("read vault PnL", getVaultPnL, 45_000)) ?? 0;
-    const realizedPnLLamports = Math.round(realizedPnLSOL * LAMPORTS_PER_SOL);
+    // NAV writes are now event-driven: only push a new NAV when a trade closed
+    // with non-zero realized PnL. This prevents writing identical NAVs every
+    // 15 minutes and keeps the on-chain history meaningful.
+    let navSig: string | null = null;
     const oldNavLamports = currentVault.nav.toNumber();
-    const newNavLamports = Math.max(
-      oldNavLamports + realizedPnLLamports,
-      MIN_NAV_LAMPORTS
-    );
-    const navSig = await safeStep("update NAV on-chain", () =>
-      updateNavOnChain(newNavLamports)
-    , 60_000);
+    let newNavLamports = oldNavLamports;
+    if (realizedPnLLamports !== 0) {
+      newNavLamports = Math.max(oldNavLamports + realizedPnLLamports, MIN_NAV_LAMPORTS);
+      // Clamp to ±10% to match the on-chain cap so the call doesn't revert.
+      const ceil = Math.floor(oldNavLamports * 1.10);
+      const floor = Math.ceil(oldNavLamports * 0.75);
+      if (oldNavLamports > 0) {
+        newNavLamports = Math.min(Math.max(newNavLamports, floor), ceil);
+      }
+      navSig = await safeStep("update NAV on-chain", () =>
+        updateNavOnChain(newNavLamports)
+      , 60_000);
+    }
 
     printCycle({
       signals,
@@ -122,6 +196,8 @@ async function runCycle(): Promise<void> {
       vaultNavSOL,
       collateral,
       position,
+      realizedPnLLamports,
+      strategyMode,
     });
   } catch (error) {
     console.warn("[agent] cycle failed", error);
@@ -190,6 +266,8 @@ function printCycle({
   newNavLamports,
   vaultNavSOL,
   collateral,
+  realizedPnLLamports,
+  strategyMode,
 }: {
   signals: MarketSignals;
   votes: AgentVotes;
@@ -206,6 +284,8 @@ function printCycle({
   vaultNavSOL: number;
   collateral: number;
   position: CurrentPosition | null;
+  realizedPnLLamports: number;
+  strategyMode: string;
 }) {
   const navSol = newNavLamports / LAMPORTS_PER_SOL;
   const txSig = executionSig || logSig;
@@ -222,6 +302,7 @@ function printCycle({
   console.log("╚══════════════════════════════════════════════╝");
 
   console.log("┌─ MARKET SIGNALS ──────────────────────────────");
+  console.log(`│  🎛️  Mode:    ${strategyMode}`);
   console.log(`│  💰 SOL:      $${signals.currentPrice.toFixed(2)}`);
   console.log(`│  📊 Funding:  ${signals.fundingRate.toFixed(4)}%/hr`);
   console.log(`│  📈 OI Δ:     ${signed(signals.oiChange)}%`);
@@ -255,8 +336,13 @@ function printCycle({
   if (txSig) {
     console.log(`│  📝 TX: ${shortSig(txSig)}`);
   }
+  if (realizedPnLLamports !== 0) {
+    console.log(
+      `│  💹 Realized PnL: ${(realizedPnLLamports / LAMPORTS_PER_SOL).toFixed(6)} SOL`
+    );
+  }
   console.log(
-    `│  💸 pay.sh: +0.001 SOL earned${paymentSig ? ` | tx: ${shortSig(paymentSig)}` : ""}`
+    `│  💸 pay.sh: ${paymentSig ? `streamed | tx: ${shortSig(paymentSig)}` : "no payment this cycle"}`
   );
   console.log(`│  📈 Vault NAV: ${navSol.toFixed(4)} SOL`);
   console.log("└───────────────────────────────────────────────");

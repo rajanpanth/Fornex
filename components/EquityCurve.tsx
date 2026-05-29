@@ -113,13 +113,14 @@ export default function EquityCurve({ vault }: { vault: VaultData | null }) {
       : [{ t: "Start", nav: vault ? Number(vault.nav) / LAMPORTS_PER_SOL : 0, label: "Initial" }];
   }, [range, vault, history]);
 
-  // Dynamic Y-axis domain with padding so the line never sits at the edge
+  // Dynamic Y-axis domain with padding so the line never sits at the edge.
+  // Floor at 0 so the chart never appears to dip below zero on a single point.
   const { yMin, yMax } = useMemo(() => {
     const vals = chartData.map((d) => d.nav);
     const lo = Math.min(...vals);
     const hi = Math.max(...vals);
     const pad = (hi - lo) * 0.18 || lo * 0.04 || 0.2;
-    return { yMin: lo - pad, yMax: hi + pad };
+    return { yMin: Math.max(0, lo - pad), yMax: hi + pad };
   }, [chartData]);
 
   // ~5 evenly-spaced X-axis labels
@@ -131,6 +132,35 @@ export default function EquityCurve({ vault }: { vault: VaultData | null }) {
   const isTrending = chartData.length > 1 && chartData[chartData.length - 1].nav >= chartData[0].nav;
   const strokeColor = isTrending ? "#dbff6c" : "#ff6b8a";
   const gradientId = isTrending ? "navGradUp" : "navGradDown";
+
+  if (chartData.length < 2) {
+    return (
+      <div className="equity-panel">
+        <div className="equity-header">
+          <span className="equity-title">
+            <TrendingUp size={14} />
+            PERFORMANCE HISTORY
+          </span>
+        </div>
+        <div className="equity-empty" style={{
+          height: 200,
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "center",
+          textAlign: "center",
+          padding: "0 24px",
+          color: "rgba(148,163,184,0.7)",
+          fontSize: 12,
+          fontFamily: "'JetBrains Mono', monospace",
+        }}>
+          Performance chart unlocks after the first NAV snapshot.
+        </div>
+        <p className="equity-onchain-subtitle">
+          Every data point will be a real on-chain NavRecord account
+        </p>
+      </div>
+    );
+  }
 
   return (
     <div className="equity-panel">

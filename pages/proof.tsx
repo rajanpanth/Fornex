@@ -18,15 +18,16 @@ import {
   DECISION_ACCOUNT_SIZE,
   Decision,
   LEGACY_DECISION_ACCOUNT_SIZE,
+  RPC_URL,
   decodeDecision,
   dirLabel,
   formatTimeAgo,
 } from "../lib/chain";
+import { useDecisionStream } from "../hooks/useDecisionStream";
 
 const PROGRAM_ID = "H6vbfTp6XwfFSHWtpzjZuyrx6bpnp8Rwt6bVZAUT6vZf";
 const VAULT_PDA = "HMkL7zzAroE919esVY6HSMYzB2ejHM5m4A8JKCSrgBXR";
 const FNRX_MINT = "BNBf6ed4h8dZiVd8wpUkcv8BUyFsp75eidkcUhSb94vj";
-const RPC = "https://api.devnet.solana.com";
 
 type Filter = "all" | "long" | "short" | "flat";
 
@@ -36,13 +37,14 @@ export default function ProofPage() {
   const [error, setError] = useState<string | null>(null);
   const [filter, setFilter] = useState<Filter>("all");
   const [lastSync, setLastSync] = useState<number | null>(null);
+  const [livePulse, setLivePulse] = useState(0);
 
   useEffect(() => {
     let cancelled = false;
 
     async function fetchAll() {
       try {
-        const connection = new Connection(RPC, "confirmed");
+        const connection = new Connection(RPC_URL, "confirmed");
         const programId = new PublicKey(PROGRAM_ID);
         const [current, legacy] = await Promise.all([
           connection.getProgramAccounts(programId, {
@@ -74,12 +76,34 @@ export default function ProofPage() {
     }
 
     void fetchAll();
+    // Polling backstop. The live WSS stream below pushes refreshes
+    // immediately when the program emits matching logs; this 60s tick
+    // keeps the page accurate when the socket is unavailable.
     const id = setInterval(() => void fetchAll(), 60_000);
+    // Expose the fetch fn to the live-stream effect via a ref-like trick:
+    // we simply re-trigger via livePulse -> useEffect dep.
+    (window as any).__fornexProofRefresh = fetchAll;
     return () => {
       cancelled = true;
       clearInterval(id);
+      delete (window as any).__fornexProofRefresh;
     };
   }, []);
+
+  // Re-run the fetch on every live-pulse tick (one tick per matched log).
+  useEffect(() => {
+    if (livePulse === 0) return;
+    const fn = (window as any).__fornexProofRefresh as
+      | (() => Promise<void>)
+      | undefined;
+    if (fn) void fn();
+  }, [livePulse]);
+
+  // Live push: any matching program log bumps the pulse counter, which
+  // re-runs the fetcher above. No-op when no WSS endpoint is reachable.
+  useDecisionStream(() => {
+    setLivePulse((p) => p + 1);
+  });
 
   const stats = useMemo(() => {
     const longs = entries.filter((e) => e.consensus.direction === 1).length;
@@ -210,6 +234,11 @@ export default function ProofPage() {
             <div className="proof-hero__sync">
               <Radio size={11} />
               <span>Synced {lastSyncLabel}</span>
+              {livePulse > 0 && (
+                <span className="proof-hero__live" title="Live stream pushed an update">
+                  <span className="live-dot" /> live
+                </span>
+              )}
             </div>
           </div>
         </section>

@@ -23,11 +23,26 @@ pub fn handler(
         !ctx.accounts.vault.is_trading_paused,
         FornexError::TradingPaused
     );
-    validate_vote(&bull_vote)?;
-    validate_vote(&bear_vote)?;
-    validate_vote(&zen_vote)?;
-    validate_vote(&consensus)?;
+    // Per-agent leverage caps enforced on-chain (matches dashboard claim).
+    // BULL max 3x, BEAR max 2x, ZEN max 2x. Consensus inherits BULL's cap.
+    validate_vote(&bull_vote, 3)?;
+    validate_vote(&bear_vote, 2)?;
+    validate_vote(&zen_vote, 2)?;
+    validate_vote(&consensus, 3)?;
     require!(execution_ref.len() <= 88, FornexError::ExecutionRefTooLong);
+
+    // On-chain confidence floor: an executed trade must clear the published
+    // 60% confidence threshold. Off-chain agent state cannot bypass this.
+    if executed {
+        require!(
+            consensus.confidence >= 60,
+            FornexError::ConfidenceBelowFloor
+        );
+        require!(
+            consensus.direction == 1 || consensus.direction == 2,
+            FornexError::InvalidDirection
+        );
+    }
 
     let vault_key = ctx.accounts.vault.key();
     let vault = &mut ctx.accounts.vault;
@@ -88,11 +103,11 @@ pub fn handler(
     Ok(())
 }
 
-fn validate_vote(vote: &AgentVoteInput) -> Result<()> {
+fn validate_vote(vote: &AgentVoteInput, max_leverage: u8) -> Result<()> {
     require!(vote.direction <= 3, FornexError::InvalidDirection);
     require!(
-        vote.leverage >= 1 && vote.leverage <= 10,
-        FornexError::InvalidLeverage
+        vote.leverage >= 1 && vote.leverage <= max_leverage,
+        FornexError::LeverageOverCap
     );
     require!(vote.confidence <= 100, FornexError::InvalidConfidence);
     require!(
@@ -152,7 +167,7 @@ pub struct LogMultiAgentDecision<'info> {
         payer = agent,
         space = 8 + MultiAgentDecision::INIT_SPACE,
         seeds = [
-            b"trade_log",
+            b"decision",
             vault.key().as_ref(),
             &(vault.trade_count + 1).to_le_bytes()
         ],

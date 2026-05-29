@@ -17,10 +17,18 @@ export const VAULT_MINT_ADDRESS = new PublicKey(
     "BNBf6ed4h8dZiVd8wpUkcv8BUyFsp75eidkcUhSb94vj"
 );
 
-export const RPC_URL =
-  process.env.NEXT_PUBLIC_HELIUS_RPC_URL ||
-  process.env.NEXT_PUBLIC_RPC_URL ||
-  "https://api.devnet.solana.com";
+/**
+ * RPC URL used by direct browser callers. On the client we route through
+ * /api/rpc so the Helius key is never bundled and 429s are absorbed by a
+ * server-side cache. On the server (SSR / API routes) we use the
+ * upstream RPC directly via the public env.
+ */
+export const RPC_URL: string =
+  typeof window !== "undefined"
+    ? `${window.location.origin}/api/rpc`
+    : process.env.NEXT_PUBLIC_HELIUS_RPC_URL ||
+      process.env.NEXT_PUBLIC_RPC_URL ||
+      "https://api.devnet.solana.com";
 
 export const DECISION_ACCOUNT_SIZE =
   8 + 32 + 4 + 16 + 4 * 203 + 8 + 1 + 88 + 8 + 8 + 8 + 8 + 1;
@@ -62,6 +70,36 @@ export type NavRecordData = {
   tradeCount: bigint;
 };
 
+/**
+ * Per-agent reputation, derived on-chain from realized trade outcomes.
+ *
+ * Stored at PDA ["agent_reputation", VAULT_ADDRESS]. May not exist on
+ * deployments that haven't run admin `init_agent_reputation` yet — the
+ * frontend treats `null` as "not initialized" and renders an empty state.
+ */
+export type AgentReputationData = {
+  pubkey: PublicKey;
+  vault: PublicKey;
+  bullCorrect: number;
+  bullTotal: number;
+  bearCorrect: number;
+  bearTotal: number;
+  zenCorrect: number;
+  zenTotal: number;
+  lastUpdated: number;
+};
+
+/** Vault-level strategy mode. Mirrors the on-chain `VaultStrategy.mode` byte. */
+export type StrategyModeLabel = "Momentum" | "MeanRevert" | "RangeDCA";
+
+export type VaultStrategyData = {
+  pubkey: PublicKey;
+  vault: PublicKey;
+  mode: number; // 0 / 1 / 2
+  modeLabel: StrategyModeLabel;
+  updatedAt: number;
+};
+
 export type Toast = {
   id: string;
   type: "success" | "error" | "info";
@@ -84,6 +122,8 @@ export type VaultData = {
   winningTrades: number;
   isTradingPaused: boolean;
   navRecordCount: bigint;
+  executedTradeCount: number;
+  inceptionNav: bigint;
 };
 
 /* ── Binary Reader ──────────────────────────────────────── */
@@ -157,9 +197,17 @@ export function decodeVault(data: Buffer): VaultData {
   };
   r.i64();
   r.u8();
+  // Fields below are appended by migrations; older accounts may be shorter.
+  // Constants reflect cumulative byte offsets after the base struct above.
+  const BASE_LEN = 8 + 32 + 32 + 8 + 8 + 8 + 4 + 4 + 1 + 8 + 1; // 122
+  const navRecordCount = data.length >= BASE_LEN + 8 ? r.u64() : 0n;
+  const executedTradeCount = data.length >= BASE_LEN + 8 + 4 ? r.u32() : 0;
+  const inceptionNav = data.length >= BASE_LEN + 8 + 4 + 8 ? r.u64() : 0n;
   return {
     ...vault,
-    navRecordCount: data.length >= 122 ? r.u64() : 0n,
+    navRecordCount,
+    executedTradeCount,
+    inceptionNav,
   };
 }
 
@@ -178,6 +226,96 @@ export function decodeNavRecord(pubkey: PublicKey, data: Buffer): NavRecordData 
   } catch {
     return null;
   }
+}
+
+/**
+ * Decode an `AgentReputation` PDA. Layout (matches state.rs):
+ *   discriminator (8) · vault (32) · bull_correct (4) · bull_total (4) ·
+ *   bear_correct (4) · bear_total (4) · zen_correct (4) · zen_total (4) ·
+ *   last_updated (8 i64) · bump (1).
+ */
+export function decodeAgentReputation(
+  pubkey: PublicKey,
+  data: Buffer
+): AgentReputationData | null {
+  try {
+    const r = new Reader(data);
+    r.skip(8);
+    const vault = r.publicKey();
+    const bullCorrect = r.u32();
+    const bullTotal = r.u32();
+    const bearCorrect = r.u32();
+    const bearTotal = r.u32();
+    const zenCorrect = r.u32();
+    const zenTotal = r.u32();
+    const lastUpdated = Number(r.i64());
+    return {
+      pubkey,
+      vault,
+      bullCorrect,
+      bullTotal,
+      bearCorrect,
+      bearTotal,
+      zenCorrect,
+      zenTotal,
+      lastUpdated,
+    };
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * Compute the PDA for the agent-reputation account belonging to `vault`.
+ * Mirrors the seeds used in the Anchor program.
+ */
+export function deriveAgentReputationPda(vault: PublicKey): PublicKey {
+  const [pda] = PublicKey.findProgramAddressSync(
+    [Buffer.from("agent_reputation"), vault.toBuffer()],
+    PROGRAM_ID
+  );
+  return pda;
+}
+
+/** Compute the PDA for the vault-strategy account. */
+export function deriveVaultStrategyPda(vault: PublicKey): PublicKey {
+  const [pda] = PublicKey.findProgramAddressSync(
+    [Buffer.from("vault_strategy"), vault.toBuffer()],
+    PROGRAM_ID
+  );
+  return pda;
+}
+
+/**
+ * Decode a `VaultStrategy` PDA. Layout (matches state.rs::VaultStrategy):
+ *   discriminator (8) · vault (32) · mode (1) · updated_at (8 i64) · bump (1).
+ */
+export function decodeVaultStrategy(
+  pubkey: PublicKey,
+  data: Buffer
+): VaultStrategyData | null {
+  try {
+    const r = new Reader(data);
+    r.skip(8);
+    const vault = r.publicKey();
+    const mode = r.u8();
+    const updatedAt = Number(r.i64());
+    return {
+      pubkey,
+      vault,
+      mode,
+      modeLabel: strategyLabelFromMode(mode),
+      updatedAt,
+    };
+  } catch {
+    return null;
+  }
+}
+
+export function strategyLabelFromMode(mode: number): StrategyModeLabel {
+  if (mode === 1) return "MeanRevert";
+  if (mode === 2) return "RangeDCA";
+  return "Momentum";
 }
 
 export function decodeDecision(pubkey: PublicKey, data: Buffer): Decision | null {

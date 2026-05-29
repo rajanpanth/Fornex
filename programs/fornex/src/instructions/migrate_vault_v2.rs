@@ -5,6 +5,14 @@ use crate::errors::FornexError;
 use crate::state::Vault;
 
 const ADMIN_OFFSET: usize = 8 + 32;
+// Vault field offsets (after 8-byte discriminator):
+//   agent_authority Pubkey (32) | admin Pubkey (32) | total_deposits u64 (8)
+//   total_shares u64 (8) | nav u64 (8) | trade_count u32 (4)
+//   winning_trades u32 (4) | is_trading_paused bool (1) | created_at i64 (8)
+//   bump u8 (1) | nav_record_count u64 (8) | executed_trade_count u32 (4)
+//   inception_nav u64 (8)
+const NAV_OFFSET: usize = 8 + 32 + 32 + 8 + 8;
+const INCEPTION_NAV_OFFSET: usize = 8 + 32 + 32 + 8 + 8 + 8 + 4 + 4 + 1 + 8 + 1 + 8 + 4;
 
 pub fn handler(ctx: Context<MigrateVaultV2>) -> Result<()> {
     let vault_info = ctx.accounts.vault.to_account_info();
@@ -12,10 +20,6 @@ pub fn handler(ctx: Context<MigrateVaultV2>) -> Result<()> {
 
     let current_len = vault_info.data_len();
     let target_len = 8 + Vault::INIT_SPACE;
-    if current_len >= target_len {
-        msg!("Vault already migrated to {} bytes", current_len);
-        return Ok(());
-    }
 
     {
         let data = vault_info.try_borrow_data()?;
@@ -31,24 +35,45 @@ pub fn handler(ctx: Context<MigrateVaultV2>) -> Result<()> {
         require_keys_eq!(admin, ctx.accounts.admin.key(), FornexError::UnauthorizedAdmin);
     }
 
-    let rent = Rent::get()?;
-    let required_lamports = rent.minimum_balance(target_len);
-    let current_lamports = vault_info.lamports();
-    if required_lamports > current_lamports {
-        system_program::transfer(
-            CpiContext::new(
-                ctx.accounts.system_program.to_account_info(),
-                system_program::Transfer {
-                    from: ctx.accounts.admin.to_account_info(),
-                    to: vault_info.clone(),
-                },
-            ),
-            required_lamports - current_lamports,
-        )?;
+    if current_len < target_len {
+        let rent = Rent::get()?;
+        let required_lamports = rent.minimum_balance(target_len);
+        let current_lamports = vault_info.lamports();
+        if required_lamports > current_lamports {
+            system_program::transfer(
+                CpiContext::new(
+                    ctx.accounts.system_program.to_account_info(),
+                    system_program::Transfer {
+                        from: ctx.accounts.admin.to_account_info(),
+                        to: vault_info.clone(),
+                    },
+                ),
+                required_lamports - current_lamports,
+            )?;
+        }
+        vault_info.realloc(target_len, true)?;
+        msg!("Vault reallocated from {} to {} bytes", current_len, target_len);
+    } else {
+        msg!("Vault already at {} bytes", current_len);
     }
 
-    vault_info.realloc(target_len, true)?;
-    msg!("Vault migrated from {} to {} bytes", current_len, target_len);
+    // Backfill inception_nav for vaults that pre-date the field. The field is
+    // zero after realloc; if it's still zero and nav is non-zero, stamp it.
+    {
+        let data = vault_info.try_borrow_data()?;
+        let nav = u64::from_le_bytes(data[NAV_OFFSET..NAV_OFFSET + 8].try_into().unwrap());
+        let inception = u64::from_le_bytes(
+            data[INCEPTION_NAV_OFFSET..INCEPTION_NAV_OFFSET + 8].try_into().unwrap(),
+        );
+        drop(data);
+        if inception == 0 && nav > 0 {
+            let mut data = vault_info.try_borrow_mut_data()?;
+            data[INCEPTION_NAV_OFFSET..INCEPTION_NAV_OFFSET + 8]
+                .copy_from_slice(&nav.to_le_bytes());
+            msg!("inception_nav backfilled to {}", nav);
+        }
+    }
+
     Ok(())
 }
 

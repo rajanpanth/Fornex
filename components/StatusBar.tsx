@@ -8,9 +8,19 @@ export default function StatusBar({
   level,
   setLevel,
 }: {
-  level: PriorityLevel;
-  setLevel: Dispatch<SetStateAction<PriorityLevel>>;
+  /**
+   * Priority-level + setter are still accepted so existing call-sites
+   * compile, but rendering the picker has moved to `DepositPanel`. The
+   * navbar pill becomes silent presence-only metadata: Pyth health and
+   * the current cluster.
+   */
+  level?: PriorityLevel;
+  setLevel?: Dispatch<SetStateAction<PriorityLevel>>;
 }) {
+  // Suppress unused-arg lint without breaking the existing call signature.
+  void level;
+  void setLevel;
+
   const [pythUp, setPythUp] = useState(true);
 
   useEffect(() => {
@@ -32,19 +42,6 @@ export default function StatusBar({
 
   return (
     <>
-      <div className="status-pill">
-        <span className="status-label">Priority Fee</span>
-        <select
-          value={level}
-          onChange={(event) => setLevel(event.target.value as PriorityLevel)}
-          className="fee-select"
-        >
-          <option value="DYNAMIC">DYNAMIC</option>
-          <option value="FAST">FAST</option>
-          <option value="TURBO">TURBO</option>
-        </select>
-      </div>
-
       <div className="status-pill">
         <span className={`dot ${pythUp ? "green" : "red"}`}>●</span>
         Pyth {pythUp ? "UP" : "DOWN"}

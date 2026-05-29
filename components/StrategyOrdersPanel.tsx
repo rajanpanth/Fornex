@@ -24,7 +24,7 @@ const getStatus = (
   consensusDir: number,
   executed: boolean
 ) => {
-  if (!executed) return { label: "SKIPPED", cls: "amber" };
+  if (!executed) return { label: "LOGGED", cls: "amber" };
   if (agentDir === consensusDir) {
     return { label: "EXECUTED ✓", cls: "emerald" };
   }

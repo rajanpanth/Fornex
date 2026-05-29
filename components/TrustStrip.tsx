@@ -23,12 +23,14 @@ type LiveTrust = {
   decisionCount: number | null;
   navSol: number | null;
   trades: number | null;
+  executedTrades: number | null;
 };
 
 const INITIAL: LiveTrust = {
   decisionCount: null,
   navSol: null,
   trades: null,
+  executedTrades: null,
 };
 
 export default function TrustStrip({
@@ -72,11 +74,13 @@ export default function TrustStrip({
 
         let navSol: number | null = null;
         let trades: number | null = null;
+        let executedTrades: number | null = null;
         if (vaultInfo) {
           try {
             const vault = decodeVault(Buffer.from(vaultInfo.data));
             navSol = Number(vault.nav) / LAMPORTS_PER_SOL;
             trades = vault.tradeCount;
+            executedTrades = vault.executedTradeCount;
           } catch {
             /* swallow decode errors */
           }
@@ -86,6 +90,7 @@ export default function TrustStrip({
           decisionCount: decisionCount ?? prev.decisionCount,
           navSol: navSol ?? prev.navSol,
           trades: trades ?? prev.trades,
+          executedTrades: executedTrades ?? prev.executedTrades,
         }));
       } catch {
         /* silent — keep stale state */
@@ -105,7 +110,7 @@ export default function TrustStrip({
   }, []);
 
   const earningsSol =
-    data.trades !== null ? (data.trades * 0.001).toFixed(3) : null;
+    data.executedTrades !== null ? (data.executedTrades * 0.001).toFixed(3) : null;
 
   const items: Array<{
     icon: React.ReactNode;
@@ -143,8 +148,8 @@ export default function TrustStrip({
     },
     {
       icon: <Activity size={13} aria-hidden="true" />,
-      label: "Trades",
-      value: data.trades !== null ? `${data.trades}` : "—",
+      label: "Executed",
+      value: data.executedTrades !== null ? `${data.executedTrades}` : "—",
       mono: true,
     },
     {

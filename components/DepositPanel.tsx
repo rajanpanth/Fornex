@@ -1,5 +1,6 @@
 import { useState } from "react";
-import { ArrowDownToLine, ArrowUpFromLine, LockKeyhole } from "lucide-react";
+import { ArrowDownToLine, ArrowUpFromLine, Gauge, LockKeyhole } from "lucide-react";
+import type { PriorityLevel } from "../hooks/usePriorityFee";
 
 export default function DepositPanel({
   walletConnected,
@@ -7,12 +8,18 @@ export default function DepositPanel({
   onSubmit,
   nav,
   userSharesRaw,
+  priorityFee,
+  setPriorityFee,
+  currentFee,
 }: {
   walletConnected: boolean;
   loading: boolean;
   onSubmit: (kind: "deposit" | "withdraw", amount: string) => void;
   nav: number;
   userSharesRaw: bigint;
+  priorityFee: PriorityLevel;
+  setPriorityFee: (level: PriorityLevel) => void;
+  currentFee: number;
 }) {
   const [tab, setTab] = useState<"deposit" | "withdraw">("deposit");
   const [amount, setAmount] = useState("0.1");
@@ -28,6 +35,17 @@ export default function DepositPanel({
       : `${(numericAmount * (nav || 1)).toFixed(4)} SOL`;
   const maxValue =
     tab === "deposit" ? "0.1" : formatUnits(userSharesRaw, 9);
+
+  // Levels in display order. Match the keys exactly with `PriorityLevel`.
+  const FEE_LEVELS: Array<{
+    key: PriorityLevel;
+    label: string;
+    sub: string;
+  }> = [
+    { key: "DYNAMIC", label: "Dynamic", sub: "live RPC avg" },
+    { key: "FAST", label: "Fast", sub: "10k μλ" },
+    { key: "TURBO", label: "Turbo", sub: "100k μλ" },
+  ];
 
   return (
     <div className="deposit-panel">
@@ -78,6 +96,38 @@ export default function DepositPanel({
         <div className="dw-preview">
           <span>{previewLabel}</span>
           <strong>{previewValue}</strong>
+        </div>
+
+        {/* Priority fee picker — segmented control inline with the
+            ticket so the user sees both the picked level *and* the
+            resolved μ-lamports value before signing. */}
+        <div className="dw-fee">
+          <div className="dw-fee__head">
+            <span className="dw-fee__label">
+              <Gauge size={12} /> Priority fee
+            </span>
+            <span className="dw-fee__value" title="Compute-unit price for the next tx">
+              {currentFee.toLocaleString()} <em>μλ / CU</em>
+            </span>
+          </div>
+          <div className="dw-fee__seg" role="radiogroup" aria-label="Priority fee level">
+            {FEE_LEVELS.map((opt) => {
+              const active = priorityFee === opt.key;
+              return (
+                <button
+                  key={opt.key}
+                  type="button"
+                  role="radio"
+                  aria-checked={active}
+                  className={`dw-fee__opt ${active ? "is-active" : ""}`}
+                  onClick={() => setPriorityFee(opt.key)}
+                >
+                  <strong>{opt.label}</strong>
+                  <span>{opt.sub}</span>
+                </button>
+              );
+            })}
+          </div>
         </div>
 
         {!walletConnected ? (
