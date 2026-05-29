@@ -16,7 +16,10 @@ const PROGRAM_ID = "H6vbfTp6XwfFSHWtpzjZuyrx6bpnp8Rwt6bVZAUT6vZf";
 export default function LiveDecisionPreview() {
   const [decisions, setDecisions] = useState<Decision[]>([]);
   const [count, setCount] = useState(0);
-  const [nextIn, setNextIn] = useState(900);
+  const [now, setNow] = useState(() => Date.now());
+
+  // Brain interval — must match LOOP_MS in agent/src/index.ts.
+  const CYCLE_MS = 15 * 60 * 1000;
 
   useEffect(() => {
     async function fetchLive() {
@@ -52,18 +55,29 @@ export default function LiveDecisionPreview() {
     return () => window.clearInterval(interval);
   }, []);
 
+  // Tick every second so the countdown updates smoothly. Real time source
+  // is the on-chain timestamp of the most recent decision (decisions[0]).
   useEffect(() => {
-    const timer = window.setInterval(() => {
-      setNextIn((prev) => (prev <= 1 ? 900 : prev - 1));
-    }, 1000);
-    return () => window.clearInterval(timer);
+    const id = window.setInterval(() => setNow(Date.now()), 1000);
+    return () => window.clearInterval(id);
   }, []);
 
-  const formatNext = (secs: number) => {
-    const minutes = Math.floor(secs / 60);
-    const seconds = secs % 60;
+  const formatNext = (ms: number) => {
+    if (ms <= 0) return "due now";
+    const totalSec = Math.ceil(ms / 1000);
+    const minutes = Math.floor(totalSec / 60);
+    const seconds = totalSec % 60;
     return `${minutes}:${seconds.toString().padStart(2, "0")}`;
   };
+
+  // Anchor the "Next in" pill to the most recent on-chain decision so this
+  // landing-page widget agrees with the dashboard and the hero ticker.
+  // Falls back to a 15-minute clock from page mount if no decisions yet.
+  const lastTsMs =
+    decisions.length > 0 && decisions[0].timestamp > 0
+      ? decisions[0].timestamp * 1000
+      : null;
+  const nextInMs = lastTsMs ? lastTsMs + CYCLE_MS - now : CYCLE_MS;
 
   return (
     <section className="live-section">
@@ -77,7 +91,7 @@ export default function LiveDecisionPreview() {
         <div className="live-stats">
           <span className="live-count">{count} decisions on Solana</span>
           <span className="live-divider">·</span>
-          <span className="live-next">Next in {formatNext(nextIn)}</span>
+          <span className="live-next">Next in {formatNext(nextInMs)}</span>
           <span className="live-dot">●</span>
         </div>
       </div>

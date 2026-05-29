@@ -88,7 +88,15 @@ export default function AppDashboard() {
   const { decisions, refresh: refreshDecisions } = useDecisions();
   const { userDeposit, userSharesSol, userPnlPct } = usePosition(vault);
   const { toasts, addToast, removeToast } = useToasts();
-  const cycle = useAgentCycle(refreshDecisions);
+  // Anchor the cycle countdown to the most recent on-chain decision so every
+  // timer on the page (topbar pill, right column, hero ticker) agrees with
+  // what's actually on chain. Multiplied by 1000 because Solana stores i64
+  // unix seconds; JS wants ms.
+  const lastDecisionMs =
+    decisions.length > 0 && decisions[0].timestamp > 0
+      ? decisions[0].timestamp * 1000
+      : null;
+  const cycle = useAgentCycle(refreshDecisions, lastDecisionMs);
 
   // Re-fetch immediately when navigating to this page client-side
   // (handles the case where the initial hook effects fired before RPC was ready)
