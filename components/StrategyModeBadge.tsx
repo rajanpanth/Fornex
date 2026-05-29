@@ -102,8 +102,9 @@ export default function StrategyModeBadge() {
           </span>
         ) : (
           <span>
-            <code>VaultStrategy</code> PDA not initialized — admin runs{" "}
-            <code>init_vault_strategy</code> once to enable mode switching.
+            Strategy modes ship in v0.4 of the program. Brain runs in{" "}
+            <strong>Momentum</strong> until the next devnet upgrade activates
+            on-chain mode switching.
           </span>
         )}
       </footer>

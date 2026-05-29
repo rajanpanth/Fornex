@@ -142,8 +142,9 @@ export default function AgentReputationCard() {
       <footer className="rep-card__footer">
         {loaded && !rep ? (
           <span className="rep-card__empty">
-            Reputation PDA not initialized yet. Admin runs{" "}
-            <code>init_agent_reputation</code> once to enable per-agent stats.
+            Per-agent reputation ships in v0.4 of the program.
+            Activates after the next devnet upgrade — instruction is wired:{" "}
+            <code>update_agent_reputation</code>.
           </span>
         ) : rep ? (
           <span className="rep-card__updated">

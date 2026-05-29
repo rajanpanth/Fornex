@@ -98,14 +98,14 @@ The Anchor program is the only authority that can change vault state.
 - Drift execution path wired (gated via `DRIFT_SKIP_EXECUTION`)
 - Pay.sh streaming micropayments on every executed trade
 - Inception NAV stamped on-chain; honest win-rate from realized PnL
-- Per-agent on-chain reputation: BULL / BEAR / ZEN win rate from realized PnL
-- Vault-level strategy modes (Momentum / MeanRevert / RangeDCA) gated on chain
 - Decision drawer with full reasoning trace, FNV-1a tamper hash, and consensus receipt
 - Live `logsSubscribe` decision stream with auto-reconnect (no SSE / no backend)
 - Risk dashboard: drawdown, high-water mark, longest losing streak, Sharpe-like ratio — all client-side from on-chain `NavRecord` history
 - Public read-only `@fornex/sdk` package (`packages/sdk/`, viem-style, peer-deps `@solana/web3.js` only)
 
-**In progress**
+**In progress (v0.4 program upgrade — code complete, awaits devnet redeploy)**
+- Per-agent on-chain reputation: BULL / BEAR / ZEN win rate from realized PnL
+- Vault-level strategy modes (Momentum / MeanRevert / RangeDCA) gated on chain
 - Helius webhook → SSE decision feed (writeable across serverless)
 - Strategy-mode-aware risk caps on-chain
 - Squads multisig on the treasury wallet

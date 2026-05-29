@@ -106,8 +106,6 @@ const roadmap: Array<{ phase: string; tone: "live" | "soon" | "next"; items: str
       "Drift execution path wired (gated by env)",
       "Pay.sh streaming micropayments on every executed trade",
       "Inception NAV stamped on-chain; honest win-rate from realized PnL",
-      "Per-agent on-chain reputation: BULL / BEAR / ZEN win rate",
-      "Vault-level strategy modes: Momentum / MeanRevert / RangeDCA",
       "Decision drawer with full reasoning trace + FNV-1a tamper hash",
       "Live logsSubscribe decision stream (no backend, auto-reconnect)",
       "Risk dashboard: drawdown, HWM, losing streak, Sharpe-like",
@@ -118,6 +116,8 @@ const roadmap: Array<{ phase: string; tone: "live" | "soon" | "next"; items: str
     phase: "In progress",
     tone: "soon",
     items: [
+      "Per-agent on-chain reputation (code complete, awaits devnet redeploy)",
+      "Vault strategy modes — Momentum / MeanRevert / RangeDCA on chain",
       "Helius webhook → SSE decision feed (writeable across serverless)",
       "Strategy-mode-aware risk caps on-chain",
       "Squads multisig on the treasury wallet",
