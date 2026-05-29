@@ -32,3 +32,6 @@ pm2-*.log
 
 # IDL (optional - can commit for transparency)
 # target/idl/
+
+# Local-only working notes
+TELEPROMPTER.md

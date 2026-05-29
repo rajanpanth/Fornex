@@ -479,7 +479,9 @@ export default function LandingPage() {
                 animate={{ opacity: 1, y: 0, filter: "blur(0px)" }}
                 transition={{ duration: 1.05, delay: 0.08, ease: [0.22, 1, 0.36, 1] }}
               >
-                Three AI agents. One Solana program. Every decision has a receipt.
+                <span style={{ whiteSpace: "nowrap" }}>Agents debate.</span><br />
+                <span style={{ whiteSpace: "nowrap" }}>Anchor enforces.</span><br />
+                <span style={{ whiteSpace: "nowrap" }}>Solana proves.</span>
               </motion.h1>
               <motion.p
                 initial={{ opacity: 0, y: 28 }}
@@ -491,23 +493,6 @@ export default function LandingPage() {
                 cap, and a separate treasury pays the agent on-chain on
                 every executed trade.
               </motion.p>
-              <motion.ul
-                className="hero-credibility"
-                aria-label="Hero credibility list"
-                initial={{ opacity: 0, y: 20 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ duration: 0.85, delay: 0.36, ease: [0.22, 1, 0.36, 1] }}
-              >
-                <li>
-                  <span>caps in Anchor</span> 3× / 2× / 2× · ±10% NAV · ≥ 60% conf
-                </li>
-                <li>
-                  <span>full reasoning on chain</span> 200 bytes per persona, decoded on /proof
-                </li>
-                <li>
-                  <span>per-trade payments</span> treasury → agent, real SystemProgram::transfer
-                </li>
-              </motion.ul>
               <motion.div
                 className="hero-actions"
                 initial={{ opacity: 0, y: 22 }}
@@ -530,13 +515,32 @@ export default function LandingPage() {
               </motion.div>
             </div>
             <div className="hero-visual parallax-slow">
-              <CodeWindow />
-              <div className="orbit-card orbit-card-a">
-                <Bot size={18} /> 3 agents online
+              <div className="hero-stage">
+                <CodeWindow />
+                <div className="orbit-card orbit-card-a">
+                  <Bot size={18} /> 3 agents online
+                </div>
+                <div className="orbit-card orbit-card-b">
+                  <RadioTower size={18} /> Solana proof stream
+                </div>
               </div>
-              <div className="orbit-card orbit-card-b">
-                <RadioTower size={18} /> Solana proof stream
-              </div>
+              <motion.ul
+                className="hero-credibility hero-credibility--right"
+                aria-label="Hero credibility list"
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ duration: 0.85, delay: 0.36, ease: [0.22, 1, 0.36, 1] }}
+              >
+                <li>
+                  <span>caps in Anchor</span> 3× / 2× / 2× · ±10% NAV · ≥ 60% conf
+                </li>
+                <li>
+                  <span>full reasoning on chain</span> 200 bytes per persona, decoded on /proof
+                </li>
+                <li>
+                  <span>per-trade payments</span> treasury → agent, real SystemProgram::transfer
+                </li>
+              </motion.ul>
             </div>
           </section>
 
