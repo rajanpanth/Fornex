@@ -42,9 +42,9 @@ export default function DepositPanel({
     label: string;
     sub: string;
   }> = [
-    { key: "DYNAMIC", label: "Dynamic", sub: "live RPC avg" },
-    { key: "FAST", label: "Fast", sub: "10k μλ" },
-    { key: "TURBO", label: "Turbo", sub: "100k μλ" },
+    { key: "DYNAMIC", label: "Auto", sub: "RPC" },
+    { key: "FAST", label: "Fast", sub: "10k" },
+    { key: "TURBO", label: "Turbo", sub: "100k" },
   ];
 
   return (
@@ -98,16 +98,16 @@ export default function DepositPanel({
           <strong>{previewValue}</strong>
         </div>
 
-        {/* Priority fee picker — segmented control inline with the
+        {/* Priority fee picker - segmented control inline with the
             ticket so the user sees both the picked level *and* the
             resolved μ-lamports value before signing. */}
         <div className="dw-fee">
           <div className="dw-fee__head">
             <span className="dw-fee__label">
-              <Gauge size={12} /> Priority fee
+              <Gauge size={12} /> Fee
             </span>
             <span className="dw-fee__value" title="Compute-unit price for the next tx">
-              {currentFee.toLocaleString()} <em>μλ / CU</em>
+              {currentFee.toLocaleString()} <em>μλ</em>
             </span>
           </div>
           <div className="dw-fee__seg" role="radiogroup" aria-label="Priority fee level">

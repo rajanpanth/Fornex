@@ -18,7 +18,7 @@ export default function LiveDecisionPreview() {
   const [count, setCount] = useState(0);
   const [now, setNow] = useState(() => Date.now());
 
-  // Brain interval — must match LOOP_MS in agent/src/index.ts.
+  // Brain interval - must match LOOP_MS in agent/src/index.ts.
   const CYCLE_MS = 15 * 60 * 1000;
 
   useEffect(() => {
@@ -82,17 +82,19 @@ export default function LiveDecisionPreview() {
   return (
     <section className="live-section">
       <div className="live-header">
-        <div className="section-label">⚡ LIVE ON-CHAIN NOW</div>
+        <div className="section-label">LIVE ON-CHAIN NOW</div>
         <h2>Watch the agents work. Right now.</h2>
         <p>
           No wallet needed. These are real AI decisions stored permanently on
           Solana devnet.
         </p>
         <div className="live-stats">
+          <span className="live-stats__status">
+            <span className="live-dot">●</span>
+            Streaming devnet
+          </span>
           <span className="live-count">{count} decisions on Solana</span>
-          <span className="live-divider">·</span>
           <span className="live-next">Next in {formatNext(nextInMs)}</span>
-          <span className="live-dot">●</span>
         </div>
       </div>
 
@@ -135,25 +137,43 @@ export default function LiveDecisionPreview() {
 
 function MiniDecisionCard({ decision }: { decision: Decision }) {
   const direction = dirLabel(decision.consensus.direction);
+  const confidence = decision.consensus.confidence;
+  const account = decision.pubkey.toBase58();
+  const shortAccount = `${account.slice(0, 4)}…${account.slice(-4)}`;
 
   return (
     <article className={`mini-decision-card ${direction.toLowerCase()}`}>
       <div className="mini-decision-top">
-        <span className="mini-direction">{direction}</span>
-        <span>{formatTimeAgo(decision.timestamp)}</span>
+        <div>
+          <span className="mini-direction">{direction}</span>
+          <span className="mini-market">SOL-PERP consensus</span>
+        </div>
+        <span className="mini-time">{formatTimeAgo(decision.timestamp)}</span>
       </div>
       <div className="mini-agent-votes">
-        <span>🐂 {dirLabel(decision.bullVote.direction)}</span>
-        <span>🐻 {dirLabel(decision.bearVote.direction)}</span>
-        <span>⚖️ {dirLabel(decision.zenVote.direction)}</span>
+        <span><b>BULL</b>{dirLabel(decision.bullVote.direction)}</span>
+        <span><b>BEAR</b>{dirLabel(decision.bearVote.direction)}</span>
+        <span><b>ZEN</b>{dirLabel(decision.zenVote.direction)}</span>
       </div>
-      <p>{decision.consensus.confidence}% confidence</p>
+      <div className="mini-confidence">
+        <div className="mini-confidence__row">
+          <span>Confidence</span>
+          <strong>{confidence}%</strong>
+        </div>
+        <div className="mini-confidence__track" aria-hidden="true">
+          <span style={{ width: `${confidence}%` }} />
+        </div>
+      </div>
+      <div className="mini-account">
+        <span>Decision account</span>
+        <code>{shortAccount}</code>
+      </div>
       <a
-        href={`https://explorer.solana.com/account/${decision.pubkey.toBase58()}?cluster=devnet`}
+        href={`https://explorer.solana.com/account/${account}?cluster=devnet`}
         target="_blank"
         rel="noopener noreferrer"
       >
-        Explorer ↗
+        Inspect account
       </a>
     </article>
   );

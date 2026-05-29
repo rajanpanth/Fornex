@@ -14,7 +14,7 @@ import {
 const PROGRAM_ID = "H6vbfTp6XwfFSHWtpzjZuyrx6bpnp8Rwt6bVZAUT6vZf";
 
 /**
- * Brain cycle interval — must match LOOP_MS in `agent/src/index.ts`.
+ * Brain cycle interval - must match LOOP_MS in `agent/src/index.ts`.
  * Used to derive the "next cycle in mm:ss" countdown shown next to the
  * latest on-chain decision. If the agent is overdue (countdown would be
  * negative), we display "due now" rather than a confusing zero.

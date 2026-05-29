@@ -10,11 +10,11 @@ export default function RiskStatusCard({
 
   // Every row below is enforced on-chain in the Anchor program.
   const rows: Array<{ label: string; value: string }> = [
-    { label: "Max leverage", value: "BULL 3× / BEAR 2× / ZEN 2×" },
-    { label: "Confidence floor", value: "60% (executed only)" },
-    { label: "NAV write cap", value: "±10% / cycle" },
-    { label: "Cycle window", value: "15 min" },
-    { label: "Custody", value: "User-controlled" },
+    { label: "Leverage", value: "3x / 2x / 2x" },
+    { label: "Min conf", value: "60%" },
+    { label: "NAV cap", value: "+/-10%" },
+    { label: "Cycle", value: "15m" },
+    { label: "Custody", value: "User" },
   ];
 
   return (
@@ -22,7 +22,7 @@ export default function RiskStatusCard({
       <div className="risk-card__head">
         <span className="risk-card__title">
           {paused ? <ShieldAlert size={14} /> : <ShieldCheck size={14} />}
-          RISK STATUS
+          Risk
         </span>
         <span
           className={`risk-card__pill ${paused ? "is-paused" : "is-active"}`}
@@ -40,7 +40,7 @@ export default function RiskStatusCard({
         ))}
       </ul>
       <p className="risk-card__foot">
-        Every cap is enforced in the Anchor program. The agent cannot override them.
+        Anchor-enforced limits.
       </p>
     </div>
   );

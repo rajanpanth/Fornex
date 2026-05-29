@@ -21,7 +21,7 @@ import {
  *
  * Because NavRecord PDAs are written only when realized PnL ≠ 0 (see
  * `agent/src/index.ts`), every point represents a real settled trade.
- * That keeps the metrics honest — they reflect actual performance, not
+ * That keeps the metrics honest - they reflect actual performance, not
  * heartbeat noise.
  */
 
@@ -94,7 +94,7 @@ function deriveStats(points: NavPoint[]): RiskStats {
   }
 
   // Sharpe-like: assume zero risk-free rate, no annualisation. We are not
-  // pretending this is a real Sharpe — it's a per-step return / volatility
+  // pretending this is a real Sharpe - it's a per-step return / volatility
   // ratio, intentionally labelled "Sharpe-like" so judges aren't misled.
   let sharpeLike: number | null = null;
   if (returns.length >= 2) {
@@ -147,12 +147,12 @@ async function fetchNavSeries(): Promise<NavPoint[]> {
 }
 
 function formatSol(value: number, fractionDigits = 4): string {
-  if (!Number.isFinite(value) || value === 0) return "—";
+  if (!Number.isFinite(value) || value === 0) return "-";
   return `${value.toFixed(fractionDigits)} SOL`;
 }
 
 function formatPct(value: number): string {
-  if (!Number.isFinite(value)) return "—";
+  if (!Number.isFinite(value)) return "-";
   return `${value.toFixed(2)}%`;
 }
 
@@ -184,7 +184,7 @@ export default function RiskDashboard() {
 
   const sharpeLabel =
     stats.sharpeLike === null
-      ? "—"
+      ? "-"
       : `${stats.sharpeLike >= 0 ? "+" : ""}${stats.sharpeLike.toFixed(2)}`;
 
   const tiles: Array<{

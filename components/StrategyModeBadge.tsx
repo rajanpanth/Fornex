@@ -18,7 +18,7 @@ import {
  * Reads the `VaultStrategy` PDA and shows the active strategy label
  * (Momentum / MeanRevert / RangeDCA) plus a deep-link to Explorer.
  *
- * If the PDA isn't initialized yet, falls back to "Momentum (default)" —
+ * If the PDA isn't initialized yet, falls back to "Momentum (default)" -
  * matching the agent runtime, which uses Momentum prompts when the PDA
  * is missing. This keeps the dashboard honest across deploys.
  */
@@ -26,9 +26,9 @@ import {
 const POLL_INTERVAL_MS = 60_000;
 
 const MODE_COPY: Record<StrategyModeLabel, string> = {
-  Momentum: "Funding-driven trend follow with squeeze bias.",
-  MeanRevert: "Fade overextensions on mark/index spread + L/S.",
-  RangeDCA: "Stage entries inside ranges, exit on regime break.",
+  Momentum: "Trend follow.",
+  MeanRevert: "Fade extremes.",
+  RangeDCA: "Range entries.",
 };
 
 export default function StrategyModeBadge() {
@@ -97,14 +97,11 @@ export default function StrategyModeBadge() {
       <footer className="strategy-badge__footer">
         {initialized ? (
           <span>
-            Set on-chain via <code>set_strategy_mode</code>. Brain reads it at
-            the top of every cycle.
+            Set on-chain.
           </span>
         ) : (
           <span>
-            Strategy modes ship in v0.4 of the program. Brain runs in{" "}
-            <strong>Momentum</strong> until the next devnet upgrade activates
-            on-chain mode switching.
+            On-chain switching after the next devnet upgrade.
           </span>
         )}
       </footer>

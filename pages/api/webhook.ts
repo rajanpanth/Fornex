@@ -9,7 +9,7 @@ const WEBHOOK_SECRET = process.env.HELIUS_WEBHOOK_SECRET || "";
 
 /**
  * Broad match: checks if the program ID appears anywhere in the event payload.
- * Helius enhanced webhook payloads vary — the program ID may appear in
+ * Helius enhanced webhook payloads vary - the program ID may appear in
  * accountData[].account, instructions[].programId, raw account keys, etc.
  * Using JSON string matching ensures we catch all variants reliably.
  */

@@ -6,11 +6,11 @@ type AgentVoteKey = "bullVote" | "bearVote" | "zenVote";
 const AGENTS: Array<{
   key: AgentVoteKey;
   name: string;
-  icon: string;
+  label: string;
 }> = [
-  { key: "bullVote", name: "BULL AGENT", icon: "🐂" },
-  { key: "bearVote", name: "BEAR AGENT", icon: "🐻" },
-  { key: "zenVote", name: "ZEN AGENT", icon: "⚖️" },
+  { key: "bullVote", name: "BULL", label: "B" },
+  { key: "bearVote", name: "BEAR", label: "R" },
+  { key: "zenVote", name: "ZEN", label: "Z" },
 ];
 
 const directionLabel = (d: number) =>
@@ -24,11 +24,16 @@ const getStatus = (
   consensusDir: number,
   executed: boolean
 ) => {
-  if (!executed) return { label: "LOGGED", cls: "amber" };
+  if (!executed) return { label: "Logged", cls: "amber" };
   if (agentDir === consensusDir) {
-    return { label: "EXECUTED ✓", cls: "emerald" };
+    return { label: "Executed", cls: "emerald" };
   }
-  return { label: "VETOED ✗", cls: "crimson" };
+  return { label: "Vetoed", cls: "neutral" };
+};
+
+const shortReason = (reasoning: string) => {
+  const text = reasoning.trim() || "No reasoning provided.";
+  return text.length > 112 ? `${text.slice(0, 109).trim()}...` : text;
 };
 
 export default function StrategyOrdersPanel({
@@ -40,8 +45,8 @@ export default function StrategyOrdersPanel({
     return (
       <div className="strategy-orders-panel">
         <div className="strategy-orders-head">
-          <span>AI STRATEGY ORDERS</span>
-          <small>Autonomous multi-agent consensus system</small>
+          <span>Agent orders</span>
+          <small>Waiting for consensus</small>
         </div>
         <div className="strategy-empty">Waiting for on-chain decisions</div>
       </div>
@@ -58,8 +63,8 @@ export default function StrategyOrdersPanel({
   return (
     <div className="strategy-orders-panel">
       <div className="strategy-orders-head">
-        <span>AI STRATEGY ORDERS</span>
-        <small>Autonomous multi-agent consensus system</small>
+        <span>Agent orders</span>
+        <small>Latest on-chain decision</small>
       </div>
 
       {AGENTS.map((agent) => {
@@ -73,23 +78,20 @@ export default function StrategyOrdersPanel({
         return (
           <div className="strategy-order-row" key={agent.key}>
             <div className="strategy-order-agent">
-              <span className="strategy-agent-icon">{agent.icon}</span>
+              <span className="strategy-agent-icon">{agent.label}</span>
               <span>{agent.name}</span>
+              <strong className={`strategy-status ${status.cls}`}>
+                {status.label}
+              </strong>
             </div>
             <div className="strategy-order-meta">
               <span className={directionClass(vote.direction)}>
                 {directionLabel(vote.direction)}
               </span>
-              <span>{vote.leverage}x leverage</span>
-              <span>{vote.confidence}% confidence</span>
+              <span>{vote.leverage}x</span>
+              <span>{vote.confidence}%</span>
             </div>
-            <p>&ldquo;{vote.reasoning || "No reasoning provided."}&rdquo;</p>
-            <div className="strategy-status-line">
-              <span>Status:</span>
-              <strong className={`strategy-status ${status.cls}`}>
-                {status.label}
-              </strong>
-            </div>
+            <p>{shortReason(vote.reasoning)}</p>
           </div>
         );
       })}
@@ -100,11 +102,11 @@ export default function StrategyOrdersPanel({
         }`}
       >
         <strong>
-          CONSENSUS: {agreeingCount}/3 {directionLabel(consensusDir)} →{" "}
-          {latestDecision.executed ? "Executed on Drift" : "Logged only"}
+          {agreeingCount}/3 {directionLabel(consensusDir)} ·{" "}
+          {latestDecision.executed ? "Executed" : "Logged"}
         </strong>
         <span>
-          Confidence: {latestDecision.consensus.confidence}% · Leverage:{" "}
+          {latestDecision.consensus.confidence}% conf ·{" "}
           {latestDecision.consensus.leverage}x
         </span>
         <a
@@ -112,7 +114,7 @@ export default function StrategyOrdersPanel({
           target="_blank"
           rel="noopener noreferrer"
         >
-          View on Explorer <ExternalLink size={13} />
+          Explorer <ExternalLink size={13} />
         </a>
       </div>
     </div>

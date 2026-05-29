@@ -30,12 +30,14 @@ const VAULT_PDA = "HMkL7zzAroE919esVY6HSMYzB2ejHM5m4A8JKCSrgBXR";
 const FNRX_MINT = "BNBf6ed4h8dZiVd8wpUkcv8BUyFsp75eidkcUhSb94vj";
 
 type Filter = "all" | "long" | "short" | "flat";
+const PAGE_SIZE = 10;
 
 export default function ProofPage() {
   const [entries, setEntries] = useState<Decision[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [filter, setFilter] = useState<Filter>("all");
+  const [page, setPage] = useState(1);
   const [lastSync, setLastSync] = useState<number | null>(null);
   const [livePulse, setLivePulse] = useState(0);
 
@@ -119,14 +121,21 @@ export default function ProofPage() {
     return entries.filter((e) => e.consensus.direction === dirNum);
   }, [entries, filter]);
 
+  const pageCount = Math.max(1, Math.ceil(visibleEntries.length / PAGE_SIZE));
+  const currentPage = Math.min(page, pageCount);
+  const pagedEntries = useMemo(() => {
+    const start = (currentPage - 1) * PAGE_SIZE;
+    return visibleEntries.slice(start, start + PAGE_SIZE);
+  }, [currentPage, visibleEntries]);
+
   const lastSyncLabel = lastSync
     ? `${Math.max(1, Math.floor((Date.now() - lastSync) / 1000))}s ago`
-    : "—";
+    : "-";
 
   return (
     <>
       <Head>
-        <title>Fornex — On-Chain Proof</title>
+        <title>Fornex - On-Chain Proof</title>
         <meta
           name="description"
           content="Every Fornex AI decision permanently stored on Solana devnet. Verifiable wall of evidence."
@@ -212,23 +221,23 @@ export default function ProofPage() {
 
           <div className="proof-hero__stats">
             <div>
-              <strong>{loading ? "—" : entries.length}</strong>
+              <strong>{loading ? "-" : entries.length}</strong>
               <span>Decisions</span>
             </div>
             <div>
-              <strong className="up">{loading ? "—" : stats.longs}</strong>
+              <strong className="up">{loading ? "-" : stats.longs}</strong>
               <span>Long</span>
             </div>
             <div>
-              <strong className="down">{loading ? "—" : stats.shorts}</strong>
+              <strong className="down">{loading ? "-" : stats.shorts}</strong>
               <span>Short</span>
             </div>
             <div>
-              <strong className="muted">{loading ? "—" : stats.flats}</strong>
+              <strong className="muted">{loading ? "-" : stats.flats}</strong>
               <span>Flat</span>
             </div>
             <div>
-              <strong>{loading ? "—" : stats.executed}</strong>
+              <strong>{loading ? "-" : stats.executed}</strong>
               <span>Executed</span>
             </div>
             <div className="proof-hero__sync">
@@ -260,7 +269,10 @@ export default function ProofPage() {
                   role="tab"
                   aria-selected={filter === f}
                   className={`proof-filter ${filter === f ? "is-active" : ""} f-${f}`}
-                  onClick={() => setFilter(f)}
+                  onClick={() => {
+                    setFilter(f);
+                    setPage(1);
+                  }}
                 >
                   <span>{f === "all" ? "All" : f.toUpperCase()}</span>
                   <small>{count}</small>
@@ -301,50 +313,89 @@ export default function ProofPage() {
               </p>
             </div>
           ) : (
-            <div className="proof-list">
-              {visibleEntries.map((entry) => {
-                const dir = dirLabel(entry.consensus.direction);
-                const cls = dir.toLowerCase();
-                return (
-                  <a
-                    key={entry.pubkey.toBase58()}
-                    href={`https://explorer.solana.com/address/${entry.pubkey.toBase58()}?cluster=devnet`}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className={`proof-entry proof-entry--${cls}`}
-                  >
-                    <span className="proof-entry__index">
-                      #{entry.decisionIndex}
-                    </span>
-                    <span className={`proof-entry__dir is-${cls}`}>{dir}</span>
-                    <span className="proof-entry__lev">
-                      {entry.consensus.leverage}×
-                    </span>
-                    <span className="proof-entry__conf">
-                      {entry.consensus.confidence}% conf
-                    </span>
-                    <span className="proof-entry__pubkey">
-                      {entry.pubkey.toBase58().slice(0, 8)}…
-                      {entry.pubkey.toBase58().slice(-8)}
-                    </span>
-                    <span
-                      className={`proof-entry__exec ${
-                        entry.executed ? "ok" : "skip"
-                      }`}
+            <>
+              <div className="proof-list">
+                {pagedEntries.map((entry) => {
+                  const dir = dirLabel(entry.consensus.direction);
+                  const cls = dir.toLowerCase();
+                  return (
+                    <a
+                      key={entry.pubkey.toBase58()}
+                      href={`https://explorer.solana.com/address/${entry.pubkey.toBase58()}?cluster=devnet`}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className={`proof-entry proof-entry--${cls}`}
                     >
-                      <CheckCircle2 size={12} />
-                      {entry.executed ? "Executed" : "Logged"}
-                    </span>
-                    <span className="proof-entry__time">
-                      {formatTimeAgo(entry.timestamp)}
-                    </span>
-                    <span className="proof-entry__arrow" aria-hidden="true">
-                      <ExternalLink size={14} />
-                    </span>
-                  </a>
-                );
-              })}
-            </div>
+                      <span className="proof-entry__index">
+                        #{entry.decisionIndex}
+                      </span>
+                      <span className={`proof-entry__dir is-${cls}`}>{dir}</span>
+                      <span className="proof-entry__lev">
+                        {entry.consensus.leverage}×
+                      </span>
+                      <span className="proof-entry__conf">
+                        {entry.consensus.confidence}% conf
+                      </span>
+                      <span className="proof-entry__pubkey">
+                        {entry.pubkey.toBase58().slice(0, 8)}…
+                        {entry.pubkey.toBase58().slice(-8)}
+                      </span>
+                      <span
+                        className={`proof-entry__exec ${
+                          entry.executed ? "ok" : "skip"
+                        }`}
+                      >
+                        <CheckCircle2 size={12} />
+                        {entry.executed ? "Executed" : "Logged"}
+                      </span>
+                      <span className="proof-entry__time">
+                        {formatTimeAgo(entry.timestamp)}
+                      </span>
+                      <span className="proof-entry__arrow" aria-hidden="true">
+                        <ExternalLink size={14} />
+                      </span>
+                    </a>
+                  );
+                })}
+              </div>
+              {pageCount > 1 && (
+                <nav className="proof-pagination" aria-label="Proof pages">
+                  <button
+                    type="button"
+                    onClick={() => setPage((p) => Math.max(1, p - 1))}
+                    disabled={currentPage === 1}
+                  >
+                    Prev
+                  </button>
+                  {Array.from({ length: pageCount }).map((_, i) => {
+                    const pageNumber = i + 1;
+                    return (
+                      <button
+                        key={pageNumber}
+                        type="button"
+                        className={pageNumber === currentPage ? "is-active" : ""}
+                        aria-current={pageNumber === currentPage ? "page" : undefined}
+                        onClick={() => setPage(pageNumber)}
+                      >
+                        {pageNumber}
+                      </button>
+                    );
+                  })}
+                  <button
+                    type="button"
+                    onClick={() => setPage((p) => Math.min(pageCount, p + 1))}
+                    disabled={currentPage === pageCount}
+                  >
+                    Next
+                  </button>
+                  <span>
+                    Showing {(currentPage - 1) * PAGE_SIZE + 1}-
+                    {Math.min(currentPage * PAGE_SIZE, visibleEntries.length)} of{" "}
+                    {visibleEntries.length}
+                  </span>
+                </nav>
+              )}
+            </>
           )}
         </main>
 

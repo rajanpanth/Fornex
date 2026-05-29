@@ -6,15 +6,15 @@ export default function PositionPanel() {
   return (
     <div className="position-panel">
       <div className="panel-header">
-        <span>POSITION</span>
-        <small>Drift monitor</small>
+        <span>Position</span>
+        <small>Drift</small>
       </div>
       <div className="position-flat">
         <span className="position-flat-orbit">
           <Radar size={28} />
         </span>
-        <span className="position-flat-text">No active position</span>
-        <span className="position-flat-sub">Agents are scanning for a clean setup.</span>
+        <span className="position-flat-text">Flat</span>
+        <span className="position-flat-sub">Waiting for setup.</span>
       </div>
     </div>
   );

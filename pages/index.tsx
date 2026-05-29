@@ -25,7 +25,7 @@ import LiveDecisionPreview from "../components/LiveDecisionPreview";
 import HeroLiveTicker from "../components/HeroLiveTicker";
 import dynamic from "next/dynamic";
 
-// Lazy-load the trust strip — it makes RPC + /api calls and is below the fold,
+// Lazy-load the trust strip - it makes RPC + /api calls and is below the fold,
 // so we don't want it blocking SSR or fighting other on-page fetches.
 const TrustStrip = dynamic(() => import("../components/TrustStrip"), {
   ssr: false,
@@ -94,10 +94,18 @@ const verifyTiles: Array<{
 
 // Shipped / In-progress / Mainnet roadmap. Mirrors the README so the
 // landing page tells the same story a judge sees in the repo.
-const roadmap: Array<{ phase: string; tone: "live" | "soon" | "next"; items: string[] }> = [
+const roadmap: Array<{
+  phase: string;
+  tone: "live" | "soon" | "next";
+  status: string;
+  summary: string;
+  items: string[];
+}> = [
   {
     phase: "Shipped (devnet)",
     tone: "live",
+    status: "Live now",
+    summary: "Production-shaped devnet surface with on-chain receipts, bounded execution, and public proof paths.",
     items: [
       "BULL / BEAR / ZEN multi-agent brain on a 15m cycle",
       "Caps enforced inside the Anchor program (3× / 2× / 2×, ±10% NAV)",
@@ -115,9 +123,11 @@ const roadmap: Array<{ phase: string; tone: "live" | "soon" | "next"; items: str
   {
     phase: "In progress",
     tone: "soon",
+    status: "Next deploy",
+    summary: "Hardening the live loop around reputation, strategy modes, webhooks, and treasury governance.",
     items: [
       "Per-agent on-chain reputation (code complete, awaits devnet redeploy)",
-      "Vault strategy modes — Momentum / MeanRevert / RangeDCA on chain",
+      "Vault strategy modes - Momentum / MeanRevert / RangeDCA on chain",
       "Helius webhook → SSE decision feed (writeable across serverless)",
       "Strategy-mode-aware risk caps on-chain",
       "Squads multisig on the treasury wallet",
@@ -127,6 +137,8 @@ const roadmap: Array<{ phase: string; tone: "live" | "soon" | "next"; items: str
   {
     phase: "Mainnet plan",
     tone: "next",
+    status: "Mainnet path",
+    summary: "Moving from demo-safe automation to depositor-defined constraints and custody-minimized capital flow.",
     items: [
       "Vault-PDA CPI signing into Drift (no agent custody of trading capital)",
       "Squads multisig on the treasury wallet",
@@ -291,6 +303,7 @@ export default function LandingPage() {
   const rootRef = useRef<HTMLDivElement>(null);
   const [scrolled, setScrolled] = useState(false);
   const [navOpen, setNavOpen] = useState(false);
+  const [expandedRoadmap, setExpandedRoadmap] = useState<Record<string, boolean>>({});
 
   // Lock body scroll when nav overlay is open
   useEffect(() => {
@@ -395,7 +408,7 @@ export default function LandingPage() {
   return (
     <>
       <Head>
-        <title>Fornex — Autonomous AI trading vault on Solana</title>
+        <title>Fornex - Autonomous AI trading vault on Solana</title>
         <meta
           name="description"
           content="Fornex is an autonomous AI trading vault on Solana devnet. A multi-agent brain runs every 15 minutes; every decision is written on-chain and verifiable."
@@ -427,7 +440,7 @@ export default function LandingPage() {
           <a href="#proof" onClick={() => setNavOpen(false)}>Proof</a>
           <a href="#security" onClick={() => setNavOpen(false)}>Security</a>
           <Link href="/judges" className="mobile-nav-link" onClick={() => setNavOpen(false)}>
-            For judges
+            For judge
           </Link>
           <Link href="/proof" className="mobile-nav-link" onClick={() => setNavOpen(false)}>
             On-chain proof
@@ -445,7 +458,7 @@ export default function LandingPage() {
             <a href="#verify">Verify</a>
             <a href="#roadmap">Roadmap</a>
             <a href="#security">Security</a>
-            <Link href="/judges">Judges</Link>
+            <Link href="/judges">Judge</Link>
             <Link href="/proof">Proof</Link>
           </nav>
           <Link href="/app" className="nav-pill">Launch App</Link>
@@ -480,7 +493,7 @@ export default function LandingPage() {
                 transition={{ duration: 1.05, delay: 0.08, ease: [0.22, 1, 0.36, 1] }}
               >
                 <span style={{ whiteSpace: "nowrap" }}>Agents debate.</span><br />
-                <span style={{ whiteSpace: "nowrap" }}>Anchor enforces.</span><br />
+                <span className="kinetic-title__compact" style={{ whiteSpace: "nowrap" }}>Anchor enforces.</span><br />
                 <span style={{ whiteSpace: "nowrap" }}>Solana proves.</span>
               </motion.h1>
               <motion.p
@@ -544,7 +557,7 @@ export default function LandingPage() {
             </div>
           </section>
 
-          {/* Trust strip — full-width band so it doesn't fight the hero column. */}
+          {/* Trust strip - full-width band so it doesn't fight the hero column. */}
           <section className="trust-band reveal">
             <TrustStrip variant="landing" />
           </section>
@@ -556,6 +569,62 @@ export default function LandingPage() {
                 <span>{label}</span>
               </div>
             ))}
+          </section>
+
+          {/* ── Verify in 30 seconds ────────────────────────────────
+              Every tile resolves to a real on-chain account or a
+              filtered Explorer view. Same pattern judges grade
+              highly: "every UI number is one click from chain proof."
+          ─────────────────────────────────────────────────────────── */}
+          <section className="verify-section reveal" id="verify">
+            <div className="section-kicker">VERIFY IN 30 SECONDS</div>
+            <h2 className="section-heading">
+              Every claim resolves on chain.
+            </h2>
+            <p className="section-copy">
+              Open any tile to inspect the exact devnet account behind it.
+              No cached numbers, no trust required.
+            </p>
+            <div className="verify-grid">
+              {verifyTiles.map(({ label, description, href, icon: Icon }) => {
+                const isInternal = href.startsWith("/");
+                if (isInternal) {
+                  return (
+                    <Link key={label} href={href} className="verify-tile">
+                      <span className="verify-tile__icon"><Icon size={18} /></span>
+                      <strong>{label}</strong>
+                      <p>{description}</p>
+                      <span className="verify-tile__arrow">
+                        <ArrowRight size={14} />
+                      </span>
+                    </Link>
+                  );
+                }
+                return (
+                  <a
+                    key={label}
+                    href={href}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="verify-tile"
+                  >
+                    <span className="verify-tile__icon"><Icon size={18} /></span>
+                    <strong>{label}</strong>
+                    <p>{description}</p>
+                    <span className="verify-tile__arrow">
+                      <ExternalLink size={14} />
+                    </span>
+                  </a>
+                );
+              })}
+            </div>
+            <div className="verify-footnote">
+              <Receipt size={14} />
+              Every executed trade emits a <code>MultiAgentDecision</code> +{" "}
+              <code>SyntheticPosition</code> PDA, plus a real{" "}
+              <code>SystemProgram::transfer</code> from treasury to agent.
+              Open <Link href="/proof">/proof</Link> for the full wall.
+            </div>
           </section>
 
           <section className="story-section" id="agents">
@@ -653,79 +722,41 @@ export default function LandingPage() {
             </div>
           </section>
 
-          {/* ── Verify in 30 seconds ────────────────────────────────
-              Every tile resolves to a real on-chain account or a
-              filtered Explorer view. Same pattern judges grade
-              highly: "every UI number is one click from chain proof."
-          ─────────────────────────────────────────────────────────── */}
-          <section className="verify-section reveal" id="verify">
-            <div className="section-kicker">VERIFY IN 30 SECONDS</div>
-            <h2 className="section-heading">
-              Every claim on this page resolves to an on-chain account.
-            </h2>
-            <p className="section-copy">
-              Click any tile below. It opens Solana Explorer on devnet at
-              the exact account that backs the metric. No backend, no
-              cached numbers, no trust required.
-            </p>
-            <div className="verify-grid">
-              {verifyTiles.map(({ label, description, href, icon: Icon }) => {
-                const isInternal = href.startsWith("/");
-                if (isInternal) {
-                  return (
-                    <Link key={label} href={href} className="verify-tile">
-                      <span className="verify-tile__icon"><Icon size={18} /></span>
-                      <strong>{label}</strong>
-                      <p>{description}</p>
-                      <span className="verify-tile__arrow">
-                        <ArrowRight size={14} />
-                      </span>
-                    </Link>
-                  );
-                }
-                return (
-                  <a
-                    key={label}
-                    href={href}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="verify-tile"
-                  >
-                    <span className="verify-tile__icon"><Icon size={18} /></span>
-                    <strong>{label}</strong>
-                    <p>{description}</p>
-                    <span className="verify-tile__arrow">
-                      <ExternalLink size={14} />
-                    </span>
-                  </a>
-                );
-              })}
-            </div>
-            <div className="verify-footnote">
-              <Receipt size={14} />
-              Every executed trade emits a <code>MultiAgentDecision</code> +{" "}
-              <code>SyntheticPosition</code> PDA, plus a real{" "}
-              <code>SystemProgram::transfer</code> from treasury to agent.
-              Open <Link href="/proof">/proof</Link> for the full wall.
-            </div>
-          </section>
-
           {/* ── Architecture diagram ─────────────────────────────────
               ASCII because judges screenshot diagrams. Mirrors the
               README architecture block so the site and repo tell the
               same story.
           ─────────────────────────────────────────────────────────── */}
           <section className="architecture-section reveal" id="architecture">
-            <div className="section-kicker">PIPELINE</div>
-            <h2 className="section-heading">From depositor to receipt, on one chain.</h2>
-            <div className="terminal-window architecture-block">
-              <div className="terminal-top">
-                <span />
-                <span />
-                <span />
-                <strong>fornex.architecture</strong>
+            <div className="architecture-heading">
+              <div>
+                <div className="section-kicker">PIPELINE</div>
+                <h2 className="section-heading">From depositor to receipt, on one chain.</h2>
               </div>
-              <pre className="architecture-block__pre">{ARCHITECTURE_DIAGRAM.trim()}</pre>
+            </div>
+            <div className="architecture-layout">
+              <div className="terminal-window architecture-block">
+                <div className="terminal-top">
+                  <span />
+                  <span />
+                  <span />
+                  <strong>fornex.architecture</strong>
+                </div>
+                <pre className="architecture-block__pre">{ARCHITECTURE_DIAGRAM.trim()}</pre>
+              </div>
+              <div className="architecture-notes" aria-label="Pipeline checkpoints">
+                {[
+                  ["01", "Vault PDA", "User deposits mint shares against a tracked vault state."],
+                  ["02", "Agent debate", "BULL, BEAR, and ZEN produce constrained consensus."],
+                  ["03", "Receipt trail", "Decision, position, outcome, and payment all leave accounts."],
+                ].map(([step, title, copy]) => (
+                  <div className="architecture-note" key={title}>
+                    <span>{step}</span>
+                    <strong>{title}</strong>
+                    <p>{copy}</p>
+                  </div>
+                ))}
+              </div>
             </div>
           </section>
 
@@ -734,22 +765,61 @@ export default function LandingPage() {
               README so judges grading both see consistent claims.
           ─────────────────────────────────────────────────────────── */}
           <section className="roadmap-section reveal" id="roadmap">
-            <div className="section-kicker">ROADMAP</div>
-            <h2 className="section-heading">What's live, what's next, and what mainnet looks like.</h2>
+            <div className="roadmap-heading">
+              <div>
+                <div className="section-kicker">ROADMAP</div>
+                <h2 className="section-heading">What's live, what's next, and what mainnet looks like.</h2>
+              </div>
+              <div className="roadmap-snapshot" aria-label="Roadmap snapshot">
+                <span>3 phases</span>
+                <strong>Devnet → Mainnet</strong>
+              </div>
+            </div>
             <div className="roadmap-grid">
-              {roadmap.map(({ phase, tone, items }) => (
-                <div className={`roadmap-column roadmap-column--${tone}`} key={phase}>
-                  <header>
-                    <span className="roadmap-dot" />
-                    <strong>{phase}</strong>
-                  </header>
-                  <ul>
-                    {items.map((item) => (
-                      <li key={item}>{item}</li>
-                    ))}
-                  </ul>
-                </div>
-              ))}
+              {roadmap.map(({ phase, tone, status, summary, items }, index) => {
+                const isExpanded = expandedRoadmap[phase] ?? false;
+                const visibleItems = isExpanded ? items : items.slice(0, 4);
+                const hiddenCount = items.length - visibleItems.length;
+
+                return (
+                  <div className={`roadmap-column roadmap-column--${tone}`} key={phase}>
+                    <header>
+                      <span className="roadmap-step">0{index + 1}</span>
+                      <div>
+                        <span className="roadmap-status">
+                          <span className="roadmap-dot" />
+                          {status}
+                        </span>
+                        <strong>{phase}</strong>
+                      </div>
+                      <span className="roadmap-count">{items.length}</span>
+                    </header>
+                    <p className="roadmap-summary">{summary}</p>
+                    <ul>
+                      {visibleItems.map((item, itemIndex) => (
+                        <li key={item}>
+                          <span className="roadmap-item-index">{String(itemIndex + 1).padStart(2, "0")}</span>
+                          <span>{item}</span>
+                        </li>
+                      ))}
+                    </ul>
+                    {items.length > 4 && (
+                      <button
+                        type="button"
+                        className="roadmap-show-more"
+                        onClick={() =>
+                          setExpandedRoadmap((current) => ({
+                            ...current,
+                            [phase]: !isExpanded,
+                          }))
+                        }
+                      >
+                        {isExpanded ? "Show less" : `Show more (${hiddenCount})`}
+                      </button>
+                    )}
+                  </div>
+                );
+              })}
             </div>
           </section>
 
@@ -772,15 +842,43 @@ export default function LandingPage() {
             </div>
             <div className="proof-stack">
               {[
-                ["Consensus", "2/3 LONG", CheckCircle2],
-                ["Program", "H6vbf…6vZf", GitBranch],
-                ["Custody", "User-controlled", LockKeyhole],
-                ["Runtime", "Agent heartbeat live", Cpu],
-              ].map(([label, value, Icon]) => (
-                <motion.div className="proof-card reveal" key={label as string} whileHover={{ y: -6 }}>
-                  <Icon size={20} />
-                  <span>{label as string}</span>
-                  <strong>{value as string}</strong>
+                {
+                  label: "Consensus",
+                  value: "2/3 LONG",
+                  copy: "Majority vote recorded with confidence and market context.",
+                  status: "Decision PDA",
+                  icon: CheckCircle2,
+                },
+                {
+                  label: "Program",
+                  value: "H6vbf…6vZf",
+                  copy: "Caps, NAV writes, and trade counters resolve to one Anchor program.",
+                  status: "Explorer ready",
+                  icon: GitBranch,
+                },
+                {
+                  label: "Custody",
+                  value: "User-controlled",
+                  copy: "The vault model avoids handing unrestricted capital to the agent.",
+                  status: "No blind trust",
+                  icon: LockKeyhole,
+                },
+                {
+                  label: "Runtime",
+                  value: "Agent heartbeat live",
+                  copy: "The live loop is observable through receipts and decision cadence.",
+                  status: "Operational",
+                  icon: Cpu,
+                },
+              ].map(({ label, value, copy, status, icon: Icon }) => (
+                <motion.div className="proof-card reveal" key={label} whileHover={{ y: -6 }}>
+                  <div className="proof-card__top">
+                    <span className="proof-card__icon"><Icon size={19} /></span>
+                    <span className="proof-card__status">{status}</span>
+                  </div>
+                  <span className="proof-card__label">{label}</span>
+                  <strong>{value}</strong>
+                  <p>{copy}</p>
                 </motion.div>
               ))}
             </div>
@@ -797,12 +895,34 @@ export default function LandingPage() {
             </div>
             <div className="security-rails">
               {[
-                "Non-custodial vault",
-                "Leverage caps",
-                "Auditable debates",
-                "Emergency pause path",
-              ].map((item) => (
-                <div className="rail reveal" key={item}>{item}</div>
+                {
+                  title: "Non-custodial vault",
+                  copy: "Depositor control stays central while strategy logic remains constrained.",
+                  icon: LockKeyhole,
+                },
+                {
+                  title: "Leverage caps",
+                  copy: "Agent recommendations are bounded before they can become execution.",
+                  icon: CandlestickChart,
+                },
+                {
+                  title: "Auditable debates",
+                  copy: "Reasoning, votes, and confidence are preserved for review.",
+                  icon: Receipt,
+                },
+                {
+                  title: "Emergency pause path",
+                  copy: "A control surface exists for halting unsafe automation.",
+                  icon: ShieldCheck,
+                },
+              ].map(({ title, copy, icon: Icon }) => (
+                <div className="rail reveal" key={title}>
+                  <span className="rail__icon"><Icon size={22} /></span>
+                  <span className="rail__content">
+                    <strong>{title}</strong>
+                    <small>{copy}</small>
+                  </span>
+                </div>
               ))}
             </div>
           </section>

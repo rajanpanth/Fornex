@@ -74,7 +74,7 @@ export type NavRecordData = {
  * Per-agent reputation, derived on-chain from realized trade outcomes.
  *
  * Stored at PDA ["agent_reputation", VAULT_ADDRESS]. May not exist on
- * deployments that haven't run admin `init_agent_reputation` yet — the
+ * deployments that haven't run admin `init_agent_reputation` yet - the
  * frontend treats `null` as "not initialized" and renders an empty state.
  */
 export type AgentReputationData = {

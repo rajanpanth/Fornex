@@ -79,7 +79,7 @@ export default function AgentEarnings({
         </div>
         <div className="earnings-row">
           <span className="earnings-row-label">Win rate</span>
-          <span className="earnings-row-val">{winRate === null ? "—" : `${winRate}%`}</span>
+          <span className="earnings-row-val">{winRate === null ? "-" : `${winRate}%`}</span>
         </div>
       </div>
 

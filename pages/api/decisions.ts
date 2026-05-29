@@ -202,7 +202,7 @@ export default async function handler(
     res.status(200).json({ decisions, count: decisions.length });
   } catch (error: any) {
     // RPC failed (almost always 429 on public devnet). If we have any cached
-    // payload at all, serve it — UI stays alive, judges don't see error
+    // payload at all, serve it - UI stays alive, judges don't see error
     // states during a demo. Only return 500 if we've never succeeded.
     const stale = getCache();
     if (stale) {

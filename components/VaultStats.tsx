@@ -40,31 +40,31 @@ export default function VaultStats({
   return (
     <div className="vault-stats-panel">
       <div className="panel-title-row">
-        <span>Vault overview</span>
+        <span>Vault</span>
         <strong>{vault?.isTradingPaused ? "Paused" : "Active"}</strong>
       </div>
       <div className="vault-stats-grid">
         <div className="vault-stat-box">
           <CircleDollarSign size={17} className="vault-stat-icon" />
-          <div className="vault-stat-label">Vault NAV</div>
+          <div className="vault-stat-label">NAV</div>
           <div className="vault-stat-value">{nav.toFixed(3)} SOL</div>
           {navChangePct === null ? (
             <div className="vault-stat-sub neutral">since inception</div>
           ) : (
             <div className={`vault-stat-sub ${navChangePct >= 0 ? "up" : "down"}`}>
               {navChangePct >= 0 ? "+" : ""}
-              {navChangePct.toFixed(1)}% since inception
+              {navChangePct.toFixed(1)}% inception
             </div>
           )}
         </div>
 
         <div className="vault-stat-box">
           <Activity size={17} className="vault-stat-icon" />
-          <div className="vault-stat-label">Your P&L</div>
+          <div className="vault-stat-label">P&L</div>
           <div className="vault-stat-value">
             {userPnlPct !== null
               ? `${userPnlPct >= 0 ? "+" : ""}${userPnlPct.toFixed(2)}%`
-              : "—"}
+              : "-"}
           </div>
           <div
             className={`vault-stat-sub ${
@@ -84,13 +84,13 @@ export default function VaultStats({
         <div className="vault-stat-box">
           <Wallet size={17} className="vault-stat-icon" />
           <div className="vault-stat-label" title="$FNRX is your vault share token. Hold it in Phantom. Redeem anytime for SOL.">
-            $FNRX BALANCE
+            $FNRX
           </div>
           <div className="vault-stat-value">
-            {fnrxBalance !== null ? fnrxBalance.toFixed(4) : "—"}
+            {fnrxBalance !== null ? fnrxBalance.toFixed(4) : "-"}
           </div>
           <div className="vault-stat-sub neutral">
-            {fnrxBalance !== null ? "vault share tokens in wallet" : "Connect wallet"}
+            {fnrxBalance !== null ? "Share token" : "Connect wallet"}
           </div>
           <a
             href={`https://explorer.solana.com/address/${FNRX_MINT_ADDRESS}?cluster=devnet`}
@@ -98,18 +98,18 @@ export default function VaultStats({
             rel="noopener noreferrer"
             className="mint-link"
           >
-            View $FNRX on Explorer ↗
+            Explorer ↗
           </a>
         </div>
 
         <div className="vault-stat-box">
           <Percent size={17} className="vault-stat-icon" />
-          <div className="vault-stat-label">Win Rate</div>
+          <div className="vault-stat-label">Win</div>
           <div className="vault-stat-value">
-            {winRate === null ? "—" : `${winRate}%`}
+            {winRate === null ? "-" : `${winRate}%`}
           </div>
           <div className="vault-stat-sub neutral">
-            {executedTrades} executed {executedTrades === 1 ? "trade" : "trades"}
+            {executedTrades} {executedTrades === 1 ? "trade" : "trades"}
           </div>
         </div>
 
@@ -117,7 +117,7 @@ export default function VaultStats({
           <BarChart3 size={17} className="vault-stat-icon" />
           <div className="vault-stat-label">Decisions</div>
           <div className="vault-stat-value">{trades}</div>
-          <div className="vault-stat-sub neutral">on-chain decisions</div>
+          <div className="vault-stat-sub neutral">On-chain</div>
         </div>
       </div>
     </div>

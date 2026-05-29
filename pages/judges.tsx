@@ -9,13 +9,13 @@ import {
 } from "lucide-react";
 
 /**
- * /judges — a single page judges can grade in 90 seconds.
+ * /judges - a single page judges can grade in 90 seconds.
  *
  * Layout follows the pattern that hackathon submissions consistently win on:
- *   1. Honest TL;DR — what we are, what we are not.
- *   2. Built-on strip — every dependency named.
- *   3. FAQ — every "is this real?" question answered with a link.
- *   4. On-chain proof table — every account a judge would want to inspect.
+ *   1. Honest TL;DR - what we are, what we are not.
+ *   2. Built-on strip - every dependency named.
+ *   3. FAQ - every "is this real?" question answered with a link.
+ *   4. On-chain proof table - every account a judge would want to inspect.
  *
  * Every claim on this page is grounded in the repo. Nothing aspirational.
  */
@@ -100,7 +100,7 @@ const faq: Array<{ q: string; a: React.ReactNode }> = [
         consensus with confidence &lt; 60%. <code>update_nav</code> rejects
         any write outside ±10% per cycle. <code>record_trade_outcome</code>{" "}
         rejects any single-trade PnL beyond ±50% of NAV. Caps live in the
-        program, not the agent — see <code>programs/fornex/src/errors.rs</code>.
+        program, not the agent - see <code>programs/fornex/src/errors.rs</code>.
       </>
     ),
   },
@@ -126,7 +126,7 @@ const faq: Array<{ q: string; a: React.ReactNode }> = [
         treasury is funded once on devnet; if the env var is missing the
         code refuses to fake a self-transfer (see{" "}
         <code>agent/src/paysh.ts</code>). Click any pay.sh tx on the proof
-        page — the <code>From</code> account is{" "}
+        page - the <code>From</code> account is{" "}
         <a href={explorerAddress(TREASURY_WALLET)} target="_blank" rel="noopener noreferrer">
           treasury
         </a>
@@ -152,7 +152,7 @@ const faq: Array<{ q: string; a: React.ReactNode }> = [
       <>
         Stored, not hashed. Each <code>AgentVote</code> reserves 200 bytes
         for reasoning text, and every <code>MultiAgentDecision</code> PDA
-        carries three of them — BULL, BEAR, ZEN — plus the consensus.
+        carries three of them - BULL, BEAR, ZEN - plus the consensus.
         That's the wall on <Link href="/proof">/proof</Link>. Truncation is
         documented in <code>agent/src/config.ts</code>.
       </>
@@ -224,7 +224,7 @@ const faq: Array<{ q: string; a: React.ReactNode }> = [
     a: (
       <>
         Yes. The repo ships{" "}
-        <code>@fornex/sdk</code> at <code>packages/sdk/</code> — a tiny
+        <code>@fornex/sdk</code> at <code>packages/sdk/</code> - a tiny
         read-only TypeScript client with peer dep <code>@solana/web3.js</code>{" "}
         only. <code>getVault</code>, <code>getDecisions</code>,{" "}
         <code>getNavHistory</code>, <code>getAgentReputation</code>, and{" "}
@@ -252,10 +252,10 @@ export default function JudgesPage() {
   return (
     <>
       <Head>
-        <title>Fornex — For judges</title>
+        <title>Fornex - For judge</title>
         <meta
           name="description"
-          content="Fornex in 90 seconds — what it is, what proves it, what's novel. Every claim resolves to an on-chain account on Solana devnet."
+          content="Fornex in 90 seconds - what it is, what proves it, what's novel. Every claim resolves to an on-chain account on Solana devnet."
         />
       </Head>
       <div className="judges-page">
@@ -265,7 +265,7 @@ export default function JudgesPage() {
             <Link href="/">Home</Link>
             <Link href="/app">App</Link>
             <Link href="/proof">Proof</Link>
-            <Link href="/judges" aria-current="page">For judges</Link>
+            <Link href="/judges" aria-current="page">For judge</Link>
           </nav>
           <Link href="/app" className="judges-topbar__cta">
             Launch App <ArrowRight size={15} />
@@ -276,9 +276,9 @@ export default function JudgesPage() {
           <section className="judges-hero">
             <div className="judges-hero__kicker">
               <ShieldCheck size={13} />
-              FOR HACKATHON JUDGES · GRADE IN 90 SECONDS
+              FAQ
             </div>
-            <h1>Fornex — what it is, what proves it.</h1>
+            <h1>Fornex - what it is, what proves it.</h1>
             <p>
               Solana devnet only. Multi-agent AI vault with caps enforced
               inside an Anchor program and per-trade streaming payments to
@@ -322,7 +322,7 @@ export default function JudgesPage() {
           </section>
 
           <section className="judges-faq">
-            <h2 className="judges-h2">FAQ for judges</h2>
+            <h2 className="judges-h2">FAQ</h2>
             <ol className="judges-faq__list">
               {faq.map((row) => (
                 <li key={row.q}>

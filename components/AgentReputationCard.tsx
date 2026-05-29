@@ -15,8 +15,8 @@ import {
  * --------------------
  * Reads the per-agent reputation PDA (["agent_reputation", VAULT]) and
  * renders win-rate per persona. The PDA may not exist yet on a freshly
- * upgraded program — in that case we render a neutral empty state with
- * "—" per persona, so the dashboard never looks broken.
+ * upgraded program - in that case we render a neutral empty state with
+ * "-" per persona, so the dashboard never looks broken.
  *
  * No backend route required. The single-account read goes through the
  * Helius-cached `/api/rpc` proxy via the shared `RPC_URL` resolver.
@@ -34,7 +34,7 @@ type Row = {
 const POLL_INTERVAL_MS = 60_000;
 
 function formatRate(correct: number, total: number): string {
-  if (total === 0) return "—";
+  if (total === 0) return "-";
   const pct = (correct / total) * 100;
   return `${pct.toFixed(0)}%`;
 }
@@ -100,8 +100,8 @@ export default function AgentReputationCard() {
       <header className="rep-card__header">
         <div className="rep-card__title">
           <Trophy size={14} />
-          <strong>Per-agent reputation</strong>
-          <span className="rep-card__chip">on-chain</span>
+          <strong>Agent reputation</strong>
+          <span className="rep-card__chip">PDA</span>
         </div>
         <a
           className="rep-card__link"
@@ -115,9 +115,7 @@ export default function AgentReputationCard() {
       </header>
 
       <p className="rep-card__sub">
-        Win rate is derived from realized PnL on every closed trade. FLAT
-        votes are excluded — they make no directional call. State lives in
-        the <code>AgentReputation</code> PDA and is incremented on-chain.
+        Closed-trade win rate. FLAT votes are excluded.
       </p>
 
       <div className="rep-card__grid">
@@ -129,7 +127,7 @@ export default function AgentReputationCard() {
               <span className="rep-row__persona">{row.persona}</span>
               <span className="rep-row__rate">{rate}</span>
               <span className="rep-row__count">
-                {row.total > 0 ? `${row.correct}/${row.total} correct` : "no settled calls yet"}
+                {row.total > 0 ? `${row.correct}/${row.total} wins` : "No trades"}
               </span>
               <span className="rep-row__bar">
                 <span style={{ width: `${widthPct}%` }} />
@@ -142,9 +140,7 @@ export default function AgentReputationCard() {
       <footer className="rep-card__footer">
         {loaded && !rep ? (
           <span className="rep-card__empty">
-            Per-agent reputation ships in v0.4 of the program.
-            Activates after the next devnet upgrade — instruction is wired:{" "}
-            <code>update_agent_reputation</code>.
+            Activates after the next devnet upgrade.
           </span>
         ) : rep ? (
           <span className="rep-card__updated">

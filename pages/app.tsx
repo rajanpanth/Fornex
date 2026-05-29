@@ -280,7 +280,7 @@ export default function AppDashboard() {
   return (
     <>
       <Head>
-        <title>Fornex — Trading Vault Dashboard</title>
+        <title>Fornex - Trading Vault Dashboard</title>
         <meta
           name="description"
           content="Fornex autonomous AI trading vault. View live agent decisions, vault NAV, and manage your position on Solana devnet."
@@ -347,7 +347,7 @@ export default function AppDashboard() {
           </div>
         </header>
 
-        {/* Trust strip — desktop only, summarizes live protocol metrics */}
+        {/* Trust strip - desktop only, summarizes live protocol metrics */}
         <div className="app-trust">
           <TrustStripLazy />
         </div>
@@ -418,7 +418,7 @@ export default function AppDashboard() {
               ))}
             </div>
 
-            {/* Stats — agent earnings + reputation + latest signal */}
+            {/* Stats - agent earnings + reputation + latest signal */}
             <div
               className="stats-pane"
               role="tabpanel"
@@ -429,7 +429,7 @@ export default function AppDashboard() {
               <StrategyOrdersPanel latestDecision={decisions[0] ?? null} />
             </div>
 
-            {/* Risk — drawdown / HWM / streak / Sharpe-like + equity curve */}
+            {/* Risk - drawdown / HWM / streak / Sharpe-like + equity curve */}
             <div
               className="stats-pane"
               role="tabpanel"
@@ -439,7 +439,7 @@ export default function AppDashboard() {
               <EquityCurve vault={vault} />
             </div>
 
-            {/* Performance — agent decision distribution + equity curve */}
+            {/* Performance - agent decision distribution + equity curve */}
             <div
               className="stats-pane"
               role="tabpanel"

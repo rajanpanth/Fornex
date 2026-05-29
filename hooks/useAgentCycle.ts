@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 
 /**
- * Brain interval — must match LOOP_MS in `agent/src/index.ts`.
+ * Brain interval - must match LOOP_MS in `agent/src/index.ts`.
  * If you change this, update HeroLiveTicker's CYCLE_MS too.
  */
 const CYCLE_MS = 15 * 60 * 1000;
@@ -9,16 +9,16 @@ const THINKING_MS = 15 * 1000;
 const STORAGE_KEY = "fornex-agent-cycle-start";
 
 /**
- * useAgentCycle — drives the dashboard's "Next cycle" countdown.
+ * useAgentCycle - drives the dashboard's "Next cycle" countdown.
  *
  * Truth source priority:
- *   1. `lastDecisionTimestampMs` — the on-chain timestamp of the most recent
+ *   1. `lastDecisionTimestampMs` - the on-chain timestamp of the most recent
  *      decision (× 1000 since chain stores seconds). This makes every UI
- *      surface — topbar pill, right-column "Next cycle", and the hero ticker —
+ *      surface - topbar pill, right-column "Next cycle", and the hero ticker -
  *      tick in lockstep with reality, regardless of which tab/device is
  *      looking. THIS is what you want for hackathon demos.
  *
- *   2. localStorage `fornex-agent-cycle-start` (legacy fallback) — first time
+ *   2. localStorage `fornex-agent-cycle-start` (legacy fallback) - first time
  *      the page mounted, used only when no decision has been seen yet
  *      (cold-start, brand-new vault, RPC not available).
  *

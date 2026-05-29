@@ -29,8 +29,8 @@ export function useVault() {
   const trades = vault?.tradeCount || 0;
   const executedTrades = vault?.executedTradeCount || 0;
   const winningTrades = vault?.winningTrades || 0;
-  // Win rate is derived from executed trades only — deposits no longer count
-  // as wins. Returns null when no executed trades exist so the UI renders "—".
+  // Win rate is derived from executed trades only - deposits no longer count
+  // as wins. Returns null when no executed trades exist so the UI renders "-".
   const winRate: number | null =
     executedTrades > 0 ? Math.round((winningTrades / executedTrades) * 100) : null;
   const inceptionNavSol = vault ? Number(vault.inceptionNav) / LAMPORTS_PER_SOL : 0;

@@ -97,9 +97,10 @@ export default function DecisionCard({ decision }: { decision: Decision }) {
       ? "short-executed"
       : ""
     : "";
+  const outcomeCls = decision.executed ? "executed" : "logged";
 
   return (
-    <article className={`decision-card ${cls}${expanded ? " expanded" : ""}`}>
+    <article className={`decision-card ${cls} ${outcomeCls}${expanded ? " expanded" : ""}`}>
       <div
         className="decision-card-header"
         role="button"
@@ -164,8 +165,8 @@ export default function DecisionCard({ decision }: { decision: Decision }) {
         </div>
       )}
 
-      <div className={`dc-footer ${footerCls}`}>
-        <span className={`dc-consensus ${cls}`}>
+      <div className={`dc-footer ${footerCls} ${outcomeCls}`}>
+        <span className={`dc-consensus ${cls} ${outcomeCls}`}>
           CONSENSUS: {consensusStr}
           {decision.executed ? " → Executed" : " → Logged"}
         </span>
@@ -440,9 +441,9 @@ function ConsensusReceipt({
   const dir = dirLabel(consensus.direction);
   const dirCls = dir.toLowerCase();
   const ts = new Date(timestamp * 1000);
-  const tsLabel = isNaN(ts.getTime()) ? "—" : ts.toISOString().replace("T", " ").slice(0, 19) + " UTC";
-  const priceLabel = solPriceVerified > 0 ? `$${(solPriceVerified / 1e8).toFixed(2)}` : "—";
-  const confidenceLabel = priceConfidence > 0 ? `±$${(priceConfidence / 1e8).toFixed(2)}` : "—";
+  const tsLabel = isNaN(ts.getTime()) ? "-" : ts.toISOString().replace("T", " ").slice(0, 19) + " UTC";
+  const priceLabel = solPriceVerified > 0 ? `$${(solPriceVerified / 1e8).toFixed(2)}` : "-";
+  const confidenceLabel = priceConfidence > 0 ? `±$${(priceConfidence / 1e8).toFixed(2)}` : "-";
 
   return (
     <div className="dc-receipt">

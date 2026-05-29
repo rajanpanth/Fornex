@@ -93,7 +93,7 @@ export default function TrustStrip({
           executedTrades: executedTrades ?? prev.executedTrades,
         }));
       } catch {
-        /* silent — keep stale state */
+        /* silent - keep stale state */
       }
     }
 
@@ -134,7 +134,7 @@ export default function TrustStrip({
     {
       icon: <Cpu size={13} aria-hidden="true" />,
       label: "Decisions",
-      value: data.decisionCount !== null ? `${data.decisionCount}` : "—",
+      value: data.decisionCount !== null ? `${data.decisionCount}` : "-",
       mono: true,
     },
     {
@@ -143,19 +143,19 @@ export default function TrustStrip({
       value:
         data.navSol !== null
           ? `${data.navSol.toFixed(3)} SOL`
-          : "—",
+          : "-",
       mono: true,
     },
     {
       icon: <Activity size={13} aria-hidden="true" />,
       label: "Executed",
-      value: data.executedTrades !== null ? `${data.executedTrades}` : "—",
+      value: data.executedTrades !== null ? `${data.executedTrades}` : "-",
       mono: true,
     },
     {
       icon: <Coins size={13} aria-hidden="true" />,
       label: "pay.sh earned",
-      value: earningsSol !== null ? `${earningsSol} SOL` : "—",
+      value: earningsSol !== null ? `${earningsSol} SOL` : "-",
       mono: true,
     },
   ];
