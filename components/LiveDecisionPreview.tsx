@@ -83,19 +83,18 @@ export default function LiveDecisionPreview() {
   return (
     <section className="live-section">
       <div className="live-header">
-        <div className="section-label">LIVE ON-CHAIN NOW</div>
-        <h2>Watch the agents work. Right now.</h2>
+        <div className="section-label">LIVE ON-CHAIN</div>
+        <h2>Recent agent decisions</h2>
         <p>
-          No wallet needed. These are real AI decisions stored permanently on
-          Solana devnet.
+          Latest consensus records stored on Solana devnet. No wallet required.
         </p>
         <div className="live-stats">
           <span className="live-stats__status">
             <span className="live-dot">●</span>
             Streaming devnet
           </span>
-          <span className="live-count">{count} decisions on Solana</span>
-          <span className="live-next">Next in {formatNext(nextInMs)}</span>
+          <span className="live-count">{count} decisions</span>
+          <span className="live-next">Next {formatNext(nextInMs)}</span>
         </div>
       </div>
 
@@ -127,10 +126,10 @@ export default function LiveDecisionPreview() {
 
       <div className="live-section-actions">
         <Link href="/app" className="live-cta">
-          View all {count} decisions in the app →
+          Open decisions →
         </Link>
         <Link href="/proof" className="live-cta live-cta--alt">
-          Inspect on-chain proof →
+          View proof →
         </Link>
       </div>
     </section>

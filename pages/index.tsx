@@ -215,6 +215,42 @@ const timeline = [
   ["04", "Prove", "Consensus, votes, and execution reference are written on-chain for permanent audit."],
 ];
 
+const terminalScenarios = [
+  {
+    tab: "Market Scan",
+    command: "yes, execute with capped exposure",
+    intro: "SOL-PERP signal compression",
+    rows: [
+      ["BULL.Signal(SOL)", "Funding inverted, momentum confirmed"],
+      ["BEAR.RiskMap", "Resistance risk detected at 184.20"],
+      ["ZEN.Governor", "Approve long, cap exposure at 1.5x"],
+    ],
+    footer: "Fornex sees a promising long setup. It can route a capped order and write the reasoning on chain.",
+  },
+  {
+    tab: "Risk Debate",
+    command: "keep leverage below vault limits",
+    intro: "Vault guardrails check",
+    rows: [
+      ["BULL.Signal(SOL)", "Breakout odds rising, keep bid active"],
+      ["BEAR.Drawdown", "Budget leaves 2.8% room"],
+      ["ZEN.Governor", "Confidence clears floor, reduce size"],
+    ],
+    footer: "The trade passes risk checks, but size is reduced before execution to protect the vault.",
+  },
+  {
+    tab: "Proof Stream",
+    command: "publish the latest decision receipt",
+    intro: "On-chain proof package",
+    rows: [
+      ["Decision.PDA", "Account indexed on Solana devnet"],
+      ["Trace.Hash", "Reasoning matches local preview"],
+      ["Agent.Pay", "Treasury reward transfer queued"],
+    ],
+    footer: "The receipt is ready: consensus, agent votes, risk caps, and payment trace resolve publicly.",
+  },
+];
+
 function MagneticLink({
   href,
   children,
@@ -271,24 +307,108 @@ function StageBackground() {
 }
 
 function CodeWindow() {
+  const [scenarioIndex, setScenarioIndex] = useState(0);
+  const [typedCount, setTypedCount] = useState(0);
+  const [revealedRows, setRevealedRows] = useState(0);
+
+  const scenario = terminalScenarios[scenarioIndex];
+  const typedCommand = scenario.command.slice(0, typedCount);
+
+  useEffect(() => {
+    setTypedCount(0);
+    setRevealedRows(0);
+  }, [scenarioIndex]);
+
+  useEffect(() => {
+    if (typedCount >= scenario.command.length) return;
+    const id = window.setTimeout(
+      () => setTypedCount((count) => count + 1),
+      42
+    );
+    return () => window.clearTimeout(id);
+  }, [scenario.command.length, typedCount]);
+
+  useEffect(() => {
+    if (revealedRows >= scenario.rows.length) return;
+    const id = window.setTimeout(
+      () => setRevealedRows((count) => count + 1),
+      revealedRows === 0 ? 520 : 720
+    );
+    return () => window.clearTimeout(id);
+  }, [revealedRows, scenario.rows.length]);
+
+  useEffect(() => {
+    if (
+      typedCount < scenario.command.length ||
+      revealedRows < scenario.rows.length
+    ) {
+      return;
+    }
+
+    const id = window.setTimeout(
+      () => setScenarioIndex((index) => (index + 1) % terminalScenarios.length),
+      3200
+    );
+    return () => window.clearTimeout(id);
+  }, [revealedRows, scenario.command.length, scenario.rows.length, typedCount]);
+
+  const jumpToScenario = (index: number) => {
+    setScenarioIndex(index);
+    setTypedCount(0);
+    setRevealedRows(0);
+  };
+
   return (
     <motion.div
-      className="terminal-window hero-terminal"
-      whileHover={{ y: -10, rotateX: 2, rotateY: -3 }}
+      className="terminal-window hero-terminal agent-terminal-demo"
+      whileHover={{ y: -4, rotateX: 1, rotateY: -1 }}
       transition={{ type: "spring", stiffness: 180, damping: 18 }}
     >
-      <div className="terminal-top">
-        <span />
-        <span />
-        <span />
-        <strong>fornex.agent.ts</strong>
+      <div className="agent-terminal-top">
+        <div className="terminal-lights" aria-hidden="true">
+          <span />
+          <span />
+          <span />
+        </div>
+        <div className="agent-terminal-tabs" role="tablist" aria-label="Fornex agent demo">
+          {terminalScenarios.map((item, index) => (
+            <button
+              key={item.tab}
+              type="button"
+              role="tab"
+              aria-selected={index === scenarioIndex}
+              className={index === scenarioIndex ? "is-active" : ""}
+              onClick={() => jumpToScenario(index)}
+            >
+              {item.tab}
+            </button>
+          ))}
+        </div>
       </div>
-      <div className="terminal-body">
-        <p><b>$</b> fornex run --market SOL-PERP</p>
-        <p><i>BULL</i> funding inverted, momentum confirmed</p>
-        <p><i>BEAR</i> resistance risk detected at 184.20</p>
-        <p><i>ZEN</i> approve long, cap exposure at 1.5x</p>
-        <p className="terminal-consensus">CONSENSUS: LONG · 72% · TX READY</p>
+      <div className="terminal-body agent-terminal-body">
+        <p className="agent-terminal-intro"><span aria-hidden="true">└</span>{scenario.intro}</p>
+        <ul className="agent-terminal-flow" aria-label="Agent reasoning sequence">
+          {scenario.rows.map(([agent, copy], index) => (
+            <li
+              key={`${scenario.tab}-${agent}`}
+              className={index < revealedRows ? "is-visible" : ""}
+            >
+              <span className="agent-terminal-dot" aria-hidden="true" />
+              <span className="agent-terminal-row-text">
+                <strong>{agent}</strong>
+                <span><i aria-hidden="true">└</i>{copy}</span>
+              </span>
+            </li>
+          ))}
+        </ul>
+        <p className={`agent-terminal-answer ${revealedRows === scenario.rows.length ? "is-visible" : ""}`}>
+          {scenario.footer}
+        </p>
+        <div className="agent-command-line">
+          <b>$</b>
+          <span>{typedCommand}</span>
+          <i aria-hidden="true" />
+        </div>
       </div>
     </motion.div>
   );
@@ -448,33 +568,7 @@ export default function LandingPage() {
             <div className="hero-visual">
               <div className="hero-stage">
                 <CodeWindow />
-                <div className="orbit-card orbit-card-a">
-                  <Bot size={18} /> 3 agents online
-                </div>
-                <div className="orbit-card orbit-card-b">
-                  <RadioTower size={18} /> Solana proof stream
-                </div>
               </div>
-              <motion.ul
-                className="hero-credibility hero-credibility--right"
-                aria-label="Hero credibility list"
-                initial={{ opacity: 0, y: 20 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ duration: 0.85, delay: 0.36, ease: [0.22, 1, 0.36, 1] }}
-              >
-                <li>
-                  <span className="hero-credibility__label">caps in Anchor</span>
-                  <span className="hero-credibility__detail"><span className="hero-credibility__detail-inner">3× / 2× / 2× · ±10% NAV · ≥ 60% conf</span></span>
-                </li>
-                <li>
-                  <span className="hero-credibility__label">full reasoning on chain</span>
-                  <span className="hero-credibility__detail"><span className="hero-credibility__detail-inner">200 bytes per persona, decoded on /proof</span></span>
-                </li>
-                <li>
-                  <span className="hero-credibility__label">per-trade payments</span>
-                  <span className="hero-credibility__detail"><span className="hero-credibility__detail-inner">treasury → agent, real SystemProgram::transfer</span></span>
-                </li>
-              </motion.ul>
             </div>
           </section>
 
