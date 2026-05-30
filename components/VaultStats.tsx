@@ -50,12 +50,19 @@ export default function VaultStats({
           <div className="vault-stat-value">{nav.toFixed(3)} SOL</div>
           {navChangePct === null ? (
             <div className="vault-stat-sub neutral">since inception</div>
-          ) : (
-            <div className={`vault-stat-sub ${navChangePct >= 0 ? "up" : "down"}`}>
-              {navChangePct >= 0 ? "+" : ""}
-              {navChangePct.toFixed(1)}% inception
-            </div>
-          )}
+          ) : (() => {
+            // Use the rounded value for sign/color so a tiny negative that
+            // rounds to 0.0 doesn't render as "-0.0% down".
+            const rounded = Number(navChangePct.toFixed(1));
+            const cls = rounded > 0 ? "up" : rounded < 0 ? "down" : "neutral";
+            const sign = rounded > 0 ? "+" : "";
+            return (
+              <div className={`vault-stat-sub ${cls}`}>
+                {sign}
+                {Math.abs(rounded).toFixed(1)}% inception
+              </div>
+            );
+          })()}
         </div>
 
         <div className="vault-stat-box">
@@ -63,20 +70,26 @@ export default function VaultStats({
           <div className="vault-stat-label">P&L</div>
           <div className="vault-stat-value">
             {userPnlPct !== null
-              ? `${userPnlPct >= 0 ? "+" : ""}${userPnlPct.toFixed(2)}%`
+              ? `${Number(userPnlPct.toFixed(2)) > 0 ? "+" : ""}${Math.abs(
+                  Number(userPnlPct.toFixed(2))
+                ).toFixed(2)}%`
               : "-"}
           </div>
           <div
             className={`vault-stat-sub ${
               userPnlPct !== null
-                ? userPnlPct >= 0
+                ? Number(userPnlPct.toFixed(2)) > 0
                   ? "up"
-                  : "down"
+                  : Number(userPnlPct.toFixed(2)) < 0
+                  ? "down"
+                  : "neutral"
                 : "neutral"
             }`}
           >
             {userPnlPct !== null
-              ? `${pnlSol >= 0 ? "+" : ""}${pnlSol.toFixed(4)} SOL`
+              ? `${Number(pnlSol.toFixed(4)) > 0 ? "+" : ""}${Math.abs(
+                  Number(pnlSol.toFixed(4))
+                ).toFixed(4)} SOL`
               : "Connect wallet"}
           </div>
         </div>

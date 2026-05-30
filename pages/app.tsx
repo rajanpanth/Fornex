@@ -303,16 +303,21 @@ export default function AppDashboard() {
             <span className="topbar-market-price">
               SOL {solPrice.price > 0 ? `$${solPrice.price.toFixed(2)}` : "--"}
             </span>
-            {solPrice.price > 0 && (
-              <span
-                className={`topbar-pill ${
-                  solPrice.change >= 0 ? "up" : "down"
-                }`}
-              >
-                {solPrice.change >= 0 ? "+" : ""}
-                {solPrice.change.toFixed(1)}% {solPrice.change >= 0 ? "↑" : "↓"}
-              </span>
-            )}
+            {solPrice.price > 0 && (() => {
+              // Decide sign/arrow/color from the ROUNDED value so we never
+              // render contradictions like "-0.0% ↓" (a tiny negative that
+              // rounds to zero). Treat values that round to 0.0 as flat.
+              const rounded = Number(solPrice.change.toFixed(1));
+              const dir = rounded > 0 ? "up" : rounded < 0 ? "down" : "flat";
+              const arrow = rounded > 0 ? "↑" : rounded < 0 ? "↓" : "·";
+              const sign = rounded > 0 ? "+" : "";
+              return (
+                <span className={`topbar-pill ${dir}`}>
+                  {sign}
+                  {Math.abs(rounded).toFixed(1)}% {arrow}
+                </span>
+              );
+            })()}
           </div>
 
           <div className="app-topbar-center">

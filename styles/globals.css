@@ -1118,6 +1118,12 @@ a { color: var(--sapphire); text-decoration: none; }
   border: 1px solid var(--crimson-border);
 }
 
+.topbar-pill.flat {
+  background: rgba(148, 163, 184, 0.1);
+  color: var(--text-secondary);
+  border: 1px solid rgba(148, 163, 184, 0.22);
+}
+
 .app-topbar-center {
   flex: 1;
   display: flex;
