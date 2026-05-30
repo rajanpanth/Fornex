@@ -2465,10 +2465,11 @@ a { color: var(--sapphire); text-decoration: none; }
    ═══════════════════════════════════════════════════════════ */
 
 :root {
-  --cinema-bg: #010f11;
+  --cinema-bg: #040708;
   --cinema-panel: rgba(20, 37, 39, 0.86);
   --cinema-panel-strong: rgba(22, 43, 45, 0.94);
-  --cinema-line: rgba(230, 231, 232, 0.105);
+  --cinema-line: rgba(245, 248, 250, 0.075);
+  --cinema-line-strong: rgba(219, 255, 108, 0.36);
   --cinema-muted: rgba(226, 232, 240, 0.7);
   --cinema-faint: rgba(226, 232, 240, 0.48);
   --cinema-ease: cubic-bezier(0.22, 1, 0.36, 1);
@@ -2488,58 +2489,45 @@ a { color: var(--sapphire); text-decoration: none; }
   inset: 0;
   z-index: -2;
   pointer-events: none;
-  background:
-    radial-gradient(circle at 12% 12%, rgba(12, 50, 61, 0.35), transparent 28%),
-    linear-gradient(180deg, #010f11 0%, #020712 48%, #010f11 100%);
-}
-
-.cinema-beam {
-  position: absolute;
-  width: 130vw;
-  height: 130vh;
-  left: -14vw;
-  top: -20vh;
-  opacity: 0.95;
-  filter: blur(2px) saturate(120%);
-  transform: translateZ(0);
-  background:
-    radial-gradient(ellipse at 54% 45%, rgba(219, 255, 108, 0.86), rgba(42, 177, 122, 0.42) 18%, transparent 36%),
-    conic-gradient(from 244deg at 54% 44%, transparent 0 15deg, rgba(219, 255, 108, 0.76) 22deg, rgba(5, 107, 111, 0.45) 37deg, transparent 54deg 122deg, rgba(219, 255, 108, 0.34) 142deg, transparent 168deg 360deg);
-  animation: beam-drift 18s ease-in-out infinite alternate;
+  background: var(--cinema-bg);
 }
 
 .cinema-grid {
   position: absolute;
-  inset: 0;
-  opacity: 0.95;
+  inset: -80px;
+  opacity: 0.82;
   background-image:
     linear-gradient(to right, var(--cinema-line) 1px, transparent 1px),
     linear-gradient(to bottom, var(--cinema-line) 1px, transparent 1px);
-  background-size: calc(100vw / 6) calc(100vw / 6);
+  background-size: 72px 72px;
+  mask-image: linear-gradient(to bottom, transparent, #000 11%, #000 82%, transparent);
+  animation: grid-drift 18s linear infinite;
 }
 
 .cinema-grid::after {
   content: "";
   position: absolute;
   inset: 0;
-  background-image: radial-gradient(circle, rgba(230, 231, 232, 0.25) 0 2px, transparent 2.5px);
-  background-size: calc(100vw / 6) calc(100vw / 6);
+  background-image: radial-gradient(circle, rgba(245, 248, 250, 0.16) 0 1px, transparent 1.5px);
+  background-size: 72px 72px;
+  opacity: 0.24;
+  animation: grid-pulse 5s ease-in-out infinite;
 }
 
-.cinema-vignette {
+.cinema-cursor {
   position: absolute;
-  inset: 0;
+  width: 560px;
+  height: 560px;
+  border-radius: 50%;
+  will-change: transform;
+}
+
+.cinema-cursor {
+  opacity: 1;
+  filter: blur(10px);
   background:
-    linear-gradient(90deg, rgba(0, 0, 0, 0.94), transparent 28%, transparent 72%, rgba(0, 0, 0, 0.8)),
-    radial-gradient(circle at 50% 45%, transparent 0 34%, rgba(0, 0, 0, 0.68) 74%);
-}
-
-.cinema-scanline {
-  position: absolute;
-  inset: 0;
-  opacity: 0.18;
-  background: repeating-linear-gradient(180deg, transparent 0 7px, rgba(255, 255, 255, 0.04) 8px);
-  mix-blend-mode: overlay;
+    radial-gradient(circle, rgba(219, 255, 108, 0.34), rgba(125, 211, 199, 0.14) 32%, transparent 68%);
+  mix-blend-mode: screen;
 }
 
 .cinematic-nav {
@@ -3352,9 +3340,14 @@ a { color: var(--sapphire); text-decoration: none; }
   margin: 0 auto;
 }
 
-@keyframes beam-drift {
-  0% { transform: translate3d(-5%, -2%, 0) rotate(-4deg) scale(1); }
-  100% { transform: translate3d(4%, 3%, 0) rotate(3deg) scale(1.05); }
+@keyframes grid-drift {
+  0% { background-position: 0 0, 0 0; }
+  100% { background-position: 72px 72px, 72px 72px; }
+}
+
+@keyframes grid-pulse {
+  0%, 100% { opacity: 0.18; }
+  50% { opacity: 0.36; }
 }
 
 @keyframes float-card {
@@ -7147,10 +7140,8 @@ button,
   .app-ambient,
   .app-grid-bg,
   .mobile-tabbar,
-  .cinema-beam,
   .cinema-grid,
-  .cinema-vignette,
-  .cinema-scanline {
+  .cinema-cursor {
     display: none !important;
   }
 
@@ -8186,7 +8177,7 @@ button,
    This replaces the old in-hero trust strip that fought the hero copy. */
 .trust-band {
   width: min(1240px, calc(100% - 32px));
-  margin: -28px auto 44px;
+  margin: 36px auto 48px;
   position: relative;
   z-index: 2;
 }
@@ -8211,13 +8202,13 @@ button,
 
 @media (max-width: 1080px) {
   .trust-band {
-    margin: -12px auto 36px;
+    margin: 28px auto 40px;
   }
 }
 
 @media (max-width: 768px) {
   .trust-band {
-    margin: 0 auto 36px;
+    margin: 24px auto 36px;
   }
 }
 

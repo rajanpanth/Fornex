@@ -1,7 +1,7 @@
 import Head from "next/head";
 import Link from "next/link";
-import { useEffect, useRef, useState } from "react";
-import { motion, useMotionValue, useSpring, useTransform } from "framer-motion";
+import { useEffect, useState } from "react";
+import { motion, useMotionValue, useSpring } from "framer-motion";
 import {
   ArrowRight,
   Bot,
@@ -251,26 +251,22 @@ function MagneticLink({
 }
 
 function StageBackground() {
-  const mouseX = useMotionValue(0.5);
-  const mouseY = useMotionValue(0.35);
-  const beamX = useTransform(mouseX, [0, 1], ["-16%", "16%"]);
-  const beamY = useTransform(mouseY, [0, 1], ["-10%", "12%"]);
+  const cursorX = useMotionValue(-280);
+  const cursorY = useMotionValue(-280);
 
   useEffect(() => {
     const move = (event: MouseEvent) => {
-      mouseX.set(event.clientX / window.innerWidth);
-      mouseY.set(event.clientY / window.innerHeight);
+      cursorX.set(event.clientX - 280);
+      cursorY.set(event.clientY - 280);
     };
     window.addEventListener("mousemove", move);
     return () => window.removeEventListener("mousemove", move);
-  }, [mouseX, mouseY]);
+  }, [cursorX, cursorY]);
 
   return (
     <div className="cinema-stage" aria-hidden="true">
-      <motion.div className="cinema-beam" style={{ x: beamX, y: beamY }} />
       <div className="cinema-grid" />
-      <div className="cinema-vignette" />
-      <div className="cinema-scanline" />
+      <motion.div className="cinema-cursor" style={{ x: cursorX, y: cursorY }} />
     </div>
   );
 }
@@ -300,7 +296,6 @@ function CodeWindow() {
 }
 
 export default function LandingPage() {
-  const rootRef = useRef<HTMLDivElement>(null);
   const [scrolled, setScrolled] = useState(false);
   const [navOpen, setNavOpen] = useState(false);
   const [expandedRoadmap, setExpandedRoadmap] = useState<Record<string, boolean>>({});
@@ -316,79 +311,6 @@ export default function LandingPage() {
   }, [navOpen]);
 
   useEffect(() => {
-    let lenis: any;
-    let rafId = 0;
-    let ctx: any;
-
-    async function bootMotion() {
-      const Lenis = (await import("lenis")).default;
-      const gsapModule = await import("gsap");
-      const scrollTriggerModule = await import("gsap/ScrollTrigger");
-      const gsap = gsapModule.gsap;
-      const ScrollTrigger = scrollTriggerModule.ScrollTrigger;
-      gsap.registerPlugin(ScrollTrigger);
-
-      lenis = new Lenis({
-        duration: 1.25,
-        smoothWheel: true,
-        wheelMultiplier: 0.82,
-        touchMultiplier: 1.2,
-        easing: (t: number) => Math.min(1, 1.001 - Math.pow(2, -10 * t)),
-      });
-
-      lenis.on("scroll", ScrollTrigger.update);
-      gsap.ticker.add((time) => lenis.raf(time * 1000));
-      gsap.ticker.lagSmoothing(0);
-
-      ctx = gsap.context(() => {
-        gsap.utils.toArray<HTMLElement>(".reveal").forEach((el, index) => {
-          gsap.fromTo(
-            el,
-            { autoAlpha: 0, y: 70, filter: "blur(18px)" },
-            {
-              autoAlpha: 1,
-              y: 0,
-              filter: "blur(0px)",
-              duration: 1.15,
-              delay: (index % 4) * 0.04,
-              ease: "power3.out",
-              scrollTrigger: {
-                trigger: el,
-                start: "top 86%",
-                end: "bottom 54%",
-                toggleActions: "play none none reverse",
-              },
-            }
-          );
-        });
-
-        gsap.utils.toArray<HTMLElement>(".parallax-slow").forEach((el) => {
-          gsap.to(el, {
-            yPercent: -14,
-            ease: "none",
-            scrollTrigger: {
-              trigger: el,
-              start: "top bottom",
-              end: "bottom top",
-              scrub: 1.1,
-            },
-          });
-        });
-
-        gsap.to(".kinetic-title", {
-          backgroundPositionX: "100%",
-          ease: "none",
-          scrollTrigger: {
-            trigger: ".kinetic-title",
-            start: "top 70%",
-            end: "bottom 20%",
-            scrub: 1,
-          },
-        });
-      }, rootRef);
-    }
-
-    bootMotion();
     const onScroll = () => setScrolled(window.scrollY > 80);
     const onScrollCloseNav = () => setNavOpen(false);
     const onKeyDown = (e: KeyboardEvent) => { if (e.key === "Escape") setNavOpen(false); };
@@ -396,12 +318,9 @@ export default function LandingPage() {
     window.addEventListener("scroll", onScrollCloseNav, { passive: true });
     window.addEventListener("keydown", onKeyDown);
     return () => {
-      cancelAnimationFrame(rafId);
       window.removeEventListener("scroll", onScroll);
       window.removeEventListener("scroll", onScrollCloseNav);
       window.removeEventListener("keydown", onKeyDown);
-      ctx?.revert();
-      lenis?.destroy();
     };
   }, []);
 
@@ -416,7 +335,7 @@ export default function LandingPage() {
         <meta name="viewport" content="width=device-width, initial-scale=1" />
       </Head>
 
-      <div className="cinematic-page" ref={rootRef}>
+      <div className="cinematic-page">
         <StageBackground />
 
         {/* Mobile nav overlay */}
@@ -492,8 +411,8 @@ export default function LandingPage() {
                 animate={{ opacity: 1, y: 0, filter: "blur(0px)" }}
                 transition={{ duration: 1.05, delay: 0.08, ease: [0.22, 1, 0.36, 1] }}
               >
-                <span style={{ whiteSpace: "nowrap" }}>Agents debate.</span><br />
-                <span className="kinetic-title__compact" style={{ whiteSpace: "nowrap" }}>Anchor enforces.</span><br />
+                <span style={{ whiteSpace: "nowrap" }}>Agents debate</span><br />
+                <span className="kinetic-title__compact" style={{ whiteSpace: "nowrap" }}>Anchor enforces</span><br />
                 <span style={{ whiteSpace: "nowrap" }}>Solana proves.</span>
               </motion.h1>
               <motion.p
@@ -527,7 +446,7 @@ export default function LandingPage() {
                 <HeroLiveTicker />
               </motion.div>
             </div>
-            <div className="hero-visual parallax-slow">
+            <div className="hero-visual">
               <div className="hero-stage">
                 <CodeWindow />
                 <div className="orbit-card orbit-card-a">
