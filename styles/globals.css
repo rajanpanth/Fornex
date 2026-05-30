@@ -1,9 +1,9 @@
 /* ═══════════════════════════════════════════════════════════
    FORNEX PROTOCOL - Design System
    Inspired by: almanak.co × Hyperliquid × dHEDGE
+   Fonts (Inter + JetBrains Mono) are self-hosted via next/font
+   in pages/_app.tsx and exposed as --font-inter / --font-jetbrains.
    ═══════════════════════════════════════════════════════════ */
-
-@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&family=JetBrains+Mono:wght@400;500;600;700&display=swap');
 
 /* ── 1. CSS VARIABLES ─────────────────────────────────────── */
 :root {
@@ -48,8 +48,8 @@
   --text-on-brand: #000000;
 
   /* === TYPOGRAPHY === */
-  --font-sans: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
-  --font-mono: 'JetBrains Mono', 'Fira Code', monospace;
+  --font-sans: var(--font-inter), 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+  --font-mono: var(--font-jetbrains), 'JetBrains Mono', 'Fira Code', monospace;
 
   /* === SPACING === */
   --radius-sm: 4px;
