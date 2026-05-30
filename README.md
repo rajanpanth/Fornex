@@ -1,5 +1,5 @@
 <h1>
-  <img src="public/fornex-logo.png" alt="Fornex Protocol" width="360" />
+  <img src="public/fornex-logo.png" alt="Fornex Protocol" width="160" />
 </h1>
 
 **Autonomous, non-custodial AI trading vault on Solana.**
