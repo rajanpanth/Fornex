@@ -1,28 +1,36 @@
 import { useEffect, useState } from "react";
-import { Connection } from "@solana/web3.js";
-import { Buffer } from "buffer";
 import { ExternalLink, Trophy } from "lucide-react";
-import {
-  AgentReputationData,
-  RPC_URL,
-  VAULT_ADDRESS,
-  decodeAgentReputation,
-  deriveAgentReputationPda,
-} from "../lib/chain";
+import { VAULT_ADDRESS, deriveAgentReputationPda } from "../lib/chain";
 
 /**
  * AgentReputationCard
  * --------------------
- * Reads the per-agent reputation PDA (["agent_reputation", VAULT]) and
- * renders win-rate per persona. The PDA may not exist yet on a freshly
- * upgraded program - in that case we render a neutral empty state with
- * "-" per persona, so the dashboard never looks broken.
+ * Renders per-persona (BULL / BEAR / ZEN) closed-trade win rate.
  *
- * No backend route required. The single-account read goes through the
- * Helius-cached `/api/rpc` proxy via the shared `RPC_URL` resolver.
+ * The numbers are computed by `/api/reputation` from data that already
+ * lives on-chain: each persona's vote direction (from the
+ * `MultiAgentDecision` PDA) joined to the realized PnL of the position it
+ * opened (from the `SyntheticPosition` PDA), scored with the same rule the
+ * on-chain `update_agent_reputation` would use.
+ *
+ * We compute rather than read the dedicated `AgentReputation` PDA because
+ * the deployed devnet program is immutable and predates that instruction —
+ * the PDA can never be created against it. Computing from existing accounts
+ * makes the metric real today without a redeploy.
  */
 
 type Persona = "BULL" | "BEAR" | "ZEN";
+
+type Counter = { correct: number; total: number };
+
+type ReputationResponse = {
+  bull: Counter;
+  bear: Counter;
+  zen: Counter;
+  closedTrades: number;
+  matchedTrades: number;
+  lastUpdated: number;
+};
 
 type Row = {
   persona: Persona;
@@ -49,24 +57,23 @@ function formatTimestamp(ts: number): string {
 }
 
 export default function AgentReputationCard() {
-  const [rep, setRep] = useState<AgentReputationData | null>(null);
+  const [rep, setRep] = useState<ReputationResponse | null>(null);
   const [loaded, setLoaded] = useState(false);
   const pda = deriveAgentReputationPda(VAULT_ADDRESS);
 
   useEffect(() => {
     let cancelled = false;
-    const connection = new Connection(RPC_URL, "confirmed");
 
     async function read() {
       try {
-        const info = await connection.getAccountInfo(pda);
-        if (cancelled) return;
-        if (!info) {
-          setRep(null);
-          setLoaded(true);
+        const res = await fetch("/api/reputation", { cache: "no-store" });
+        if (!res.ok) {
+          if (!cancelled) setLoaded(true);
           return;
         }
-        setRep(decodeAgentReputation(pda, Buffer.from(info.data)));
+        const data = (await res.json()) as ReputationResponse;
+        if (cancelled) return;
+        setRep(data);
         setLoaded(true);
       } catch {
         if (!cancelled) setLoaded(true);
@@ -79,20 +86,30 @@ export default function AgentReputationCard() {
       cancelled = true;
       window.clearInterval(id);
     };
-  }, [pda]);
+  }, []);
 
-  const rows: Row[] = rep
-    ? [
-        { persona: "BULL", correct: rep.bullCorrect, total: rep.bullTotal, accent: "rep-bull" },
-        { persona: "BEAR", correct: rep.bearCorrect, total: rep.bearTotal, accent: "rep-bear" },
-        { persona: "ZEN", correct: rep.zenCorrect, total: rep.zenTotal, accent: "rep-zen" },
-      ]
-    : [
-        { persona: "BULL", correct: 0, total: 0, accent: "rep-bull" },
-        { persona: "BEAR", correct: 0, total: 0, accent: "rep-bear" },
-        { persona: "ZEN", correct: 0, total: 0, accent: "rep-zen" },
-      ];
+  const rows: Row[] = [
+    {
+      persona: "BULL",
+      correct: rep?.bull.correct ?? 0,
+      total: rep?.bull.total ?? 0,
+      accent: "rep-bull",
+    },
+    {
+      persona: "BEAR",
+      correct: rep?.bear.correct ?? 0,
+      total: rep?.bear.total ?? 0,
+      accent: "rep-bear",
+    },
+    {
+      persona: "ZEN",
+      correct: rep?.zen.correct ?? 0,
+      total: rep?.zen.total ?? 0,
+      accent: "rep-zen",
+    },
+  ];
 
+  const hasData = rows.some((r) => r.total > 0);
   const explorer = `https://explorer.solana.com/address/${pda.toBase58()}?cluster=devnet`;
 
   return (
@@ -101,7 +118,7 @@ export default function AgentReputationCard() {
         <div className="rep-card__title">
           <Trophy size={14} />
           <strong>Agent reputation</strong>
-          <span className="rep-card__chip">PDA</span>
+          <span className="rep-card__chip">LIVE</span>
         </div>
         <a
           className="rep-card__link"
@@ -115,7 +132,7 @@ export default function AgentReputationCard() {
       </header>
 
       <p className="rep-card__sub">
-        Closed-trade win rate. FLAT votes are excluded.
+        Closed-trade win rate, computed on-chain. FLAT votes are excluded.
       </p>
 
       <div className="rep-card__grid">
@@ -138,16 +155,18 @@ export default function AgentReputationCard() {
       </div>
 
       <footer className="rep-card__footer">
-        {loaded && !rep ? (
-          <span className="rep-card__empty">
-            Activates after the next devnet upgrade.
-          </span>
-        ) : rep ? (
+        {!loaded ? (
+          <span className="rep-card__updated">Loading…</span>
+        ) : hasData ? (
           <span className="rep-card__updated">
-            Updated {formatTimestamp(rep.lastUpdated)}
+            {`${rep?.matchedTrades ?? 0} closed trades scored · updated ${formatTimestamp(
+              rep?.lastUpdated ?? 0
+            )}`}
           </span>
         ) : (
-          <span className="rep-card__updated">Loading…</span>
+          <span className="rep-card__empty">
+            Activates once the agent closes its first directional trade.
+          </span>
         )}
       </footer>
     </section>

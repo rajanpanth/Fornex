@@ -1,9 +1,9 @@
 # Dockerfile for the Fornex agent runtime.
 #
-# Built and run on Fly.io as a single always-on Machine. The agent loop
-# wakes every 15 minutes, reads the on-chain VaultStrategy, fetches market
-# signals, asks BULL/BEAR/ZEN for votes, and writes a MultiAgentDecision PDA
-# to Solana devnet. No HTTP server, no inbound traffic.
+# Built and run on an Azure VM as a single always-on container. The agent
+# loop wakes every 15 minutes, reads the on-chain VaultStrategy, fetches
+# market signals, asks BULL/BEAR/ZEN for votes, and writes a
+# MultiAgentDecision PDA to Solana devnet. No HTTP server, no inbound traffic.
 #
 # Build context: the `agent/` directory only. We intentionally do NOT pull
 # in the Next.js workspace at the repo root — the agent is self-contained.
@@ -27,6 +27,6 @@ RUN if [ -f package-lock.json ]; then npm ci --omit=dev=false; \
 COPY . .
 
 # 3. Default cmd. pm2-runner.js bootstraps ts-node and requires src/index.ts.
-#    Fly's restart policy will restart on crash so we don't need pm2 inside
-#    the container (one process per Machine is the Fly idiom).
+#    On the Azure VM, run the container with `--restart unless-stopped` (or a
+#    systemd unit) so it comes back up on crash or reboot.
 CMD ["node", "pm2-runner.js"]
