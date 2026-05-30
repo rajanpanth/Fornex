@@ -18,7 +18,6 @@ import {
   RadioTower,
   Receipt,
   ShieldCheck,
-  Sparkles,
   WalletCards,
 } from "lucide-react";
 import LiveDecisionPreview from "../components/LiveDecisionPreview";
@@ -85,7 +84,7 @@ const verifyTiles: Array<{
     icon: Bot,
   },
   {
-    label: "Pay.sh stream",
+    label: "Agent reward",
     description: "Treasury → agent on every executed trade.",
     href: `https://explorer.solana.com/address/${TREASURY_WALLET}?cluster=devnet`,
     icon: Coins,
@@ -112,7 +111,7 @@ const roadmap: Array<{
       "On-chain MultiAgentDecision PDAs with full reasoning",
       "Synthetic Pyth-marked perps as a self-contained executor",
       "Drift execution path wired (gated by env)",
-      "Pay.sh streaming micropayments on every executed trade",
+      "Agent reward stream (treasury → agent) on every executed trade",
       "Inception NAV stamped on-chain; honest win-rate from realized PnL",
       "Decision drawer with full reasoning trace + FNV-1a tamper hash",
       "Live logsSubscribe decision stream (no backend, auto-reconnect)",
@@ -173,7 +172,7 @@ PDA  (proof)           perp executor
    │                     SyntheticPosition PDA
    │                     (Pyth-marked PnL)
    ▼
-record_trade_outcome  →  pay.sh stream
+record_trade_outcome  →  agent reward
 (executed_trade_count)    (treasury → agent)
 `;
 
@@ -435,7 +434,7 @@ export default function LandingPage() {
                   Launch App <ArrowRight size={18} />
                 </MagneticLink>
                 <Link className="ghost-orbit" href="/proof">
-                  View live proof <Sparkles size={17} />
+                  View live proof
                 </Link>
               </motion.div>
               <motion.div
@@ -861,7 +860,7 @@ export default function LandingPage() {
                 Launch Fornex <ArrowRight size={18} />
               </MagneticLink>
               <Link href="/proof" className="ghost-orbit">
-                View on-chain proof <Sparkles size={17} />
+                View on-chain proof
               </Link>
             </div>
           </section>

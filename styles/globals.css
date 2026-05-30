@@ -13260,7 +13260,7 @@ button,
 }
 
 .hero-credibility li::before {
-  content: "→";
+  content: ".";
   position: absolute;
   left: 15px;
   top: 22px;
@@ -13292,13 +13292,7 @@ button,
 }
 
 .hero-credibility__label::after {
-  content: "→";
-  margin-left: 10px;
-  color: rgba(219, 255, 108, 0.58);
-  font-weight: 700;
-  transition:
-    color 220ms var(--cinema-ease),
-    transform 260ms var(--cinema-ease);
+  content: none;
 }
 
 /* Smooth accordion reveal via grid-template-rows (0fr -> 1fr).
