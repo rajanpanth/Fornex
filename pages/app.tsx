@@ -290,6 +290,7 @@ export default function AppDashboard() {
       <div className="app-layout">
         <div className="app-ambient" aria-hidden="true" />
         <div className="app-grid-bg" aria-hidden="true" />
+        <h1 className="sr-only">Fornex trading vault dashboard</h1>
         {/* ═══ TOPBAR ═══ */}
         <header className="app-topbar">
           <Link href="/" className="app-topbar-logo">

@@ -5,6 +5,8 @@
   "scripts": {
     "build": "next build",
     "prebuild": "node scripts/check-no-secrets.js",
+    "typecheck": "tsc --noEmit",
+    "lint": "next lint",
     "test": "anchor test",
     "deploy": "anchor deploy",
     "agent": "ts-node agent/src/index.ts",
@@ -47,6 +49,8 @@
     "@types/react": "^18.3.18",
     "@types/react-dom": "^18.3.5",
     "chai": "^4.3.7",
+    "eslint": "^8.57.1",
+    "eslint-config-next": "^14.2.35",
     "mocha": "^10.2.0",
     "ts-mocha": "^10.0.0",
     "ts-node": "^10.9.2",

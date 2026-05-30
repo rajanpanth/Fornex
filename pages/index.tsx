@@ -411,9 +411,9 @@ export default function LandingPage() {
                 animate={{ opacity: 1, y: 0, filter: "blur(0px)" }}
                 transition={{ duration: 1.05, delay: 0.08, ease: [0.22, 1, 0.36, 1] }}
               >
-                <span style={{ whiteSpace: "nowrap" }}>Agents debate</span><br />
-                <span className="kinetic-title__compact" style={{ whiteSpace: "nowrap" }}>Anchor enforces</span><br />
-                <span style={{ whiteSpace: "nowrap" }}>Solana proves.</span>
+                <span>Agents debate</span><br />
+                <span className="kinetic-title__compact">Anchor enforces</span><br />
+                <span>Solana proves.</span>
               </motion.h1>
               <motion.p
                 initial={{ opacity: 0, y: 28 }}
@@ -464,13 +464,16 @@ export default function LandingPage() {
                 transition={{ duration: 0.85, delay: 0.36, ease: [0.22, 1, 0.36, 1] }}
               >
                 <li>
-                  <span>caps in Anchor</span> 3× / 2× / 2× · ±10% NAV · ≥ 60% conf
+                  <span className="hero-credibility__label">caps in Anchor</span>
+                  <span className="hero-credibility__detail"><span className="hero-credibility__detail-inner">3× / 2× / 2× · ±10% NAV · ≥ 60% conf</span></span>
                 </li>
                 <li>
-                  <span>full reasoning on chain</span> 200 bytes per persona, decoded on /proof
+                  <span className="hero-credibility__label">full reasoning on chain</span>
+                  <span className="hero-credibility__detail"><span className="hero-credibility__detail-inner">200 bytes per persona, decoded on /proof</span></span>
                 </li>
                 <li>
-                  <span>per-trade payments</span> treasury → agent, real SystemProgram::transfer
+                  <span className="hero-credibility__label">per-trade payments</span>
+                  <span className="hero-credibility__detail"><span className="hero-credibility__detail-inner">treasury → agent, real SystemProgram::transfer</span></span>
                 </li>
               </motion.ul>
             </div>
@@ -687,7 +690,7 @@ export default function LandingPage() {
             <div className="roadmap-heading">
               <div>
                 <div className="section-kicker">ROADMAP</div>
-                <h2 className="section-heading">What's live, what's next, and what mainnet looks like.</h2>
+                <h2 className="section-heading">What&apos;s live, what&apos;s next, and what mainnet looks like.</h2>
               </div>
               <div className="roadmap-snapshot" aria-label="Roadmap snapshot">
                 <span>3 phases</span>

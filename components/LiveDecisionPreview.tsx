@@ -1,5 +1,6 @@
 import { Connection, PublicKey } from "@solana/web3.js";
 import { Buffer } from "buffer";
+import Link from "next/link";
 import { useEffect, useState } from "react";
 import {
   DECISION_ACCOUNT_SIZE,
@@ -114,35 +115,55 @@ export default function LiveDecisionPreview() {
         </div>
       ) : (
         <div className="live-cards">
-          {decisions.map((decision) => (
+          {decisions.map((decision, i) => (
             <MiniDecisionCard
               key={decision.pubkey.toBase58()}
               decision={decision}
+              isLatest={i === 0}
             />
           ))}
         </div>
       )}
 
       <div className="live-section-actions">
-        <a href="/app" className="live-cta">
+        <Link href="/app" className="live-cta">
           View all {count} decisions in the app →
-        </a>
-        <a href="/proof" className="live-cta live-cta--alt">
+        </Link>
+        <Link href="/proof" className="live-cta live-cta--alt">
           Inspect on-chain proof →
-        </a>
+        </Link>
       </div>
     </section>
   );
 }
 
-function MiniDecisionCard({ decision }: { decision: Decision }) {
+function MiniDecisionCard({
+  decision,
+  isLatest = false,
+}: {
+  decision: Decision;
+  isLatest?: boolean;
+}) {
   const direction = dirLabel(decision.consensus.direction);
   const confidence = decision.consensus.confidence;
   const account = decision.pubkey.toBase58();
   const shortAccount = `${account.slice(0, 4)}…${account.slice(-4)}`;
 
+  const bull = dirLabel(decision.bullVote.direction);
+  const bear = dirLabel(decision.bearVote.direction);
+  const zen = dirLabel(decision.zenVote.direction);
+
+  // Count agents that agree with the final consensus direction so the
+  // card can surface the vote split (e.g. "2/3 agree") at a glance.
+  const votes = [bull, bear, zen];
+  const agreeing = votes.filter((v) => v === direction).length;
+
   return (
-    <article className={`mini-decision-card ${direction.toLowerCase()}`}>
+    <article
+      className={`mini-decision-card ${direction.toLowerCase()}${
+        isLatest ? " is-latest" : ""
+      }`}
+    >
       <div className="mini-decision-top">
         <div>
           <span className="mini-direction">{direction}</span>
@@ -151,14 +172,26 @@ function MiniDecisionCard({ decision }: { decision: Decision }) {
         <span className="mini-time">{formatTimeAgo(decision.timestamp)}</span>
       </div>
       <div className="mini-agent-votes">
-        <span><b>BULL</b>{dirLabel(decision.bullVote.direction)}</span>
-        <span><b>BEAR</b>{dirLabel(decision.bearVote.direction)}</span>
-        <span><b>ZEN</b>{dirLabel(decision.zenVote.direction)}</span>
+        <span className={`vote-${bull.toLowerCase()}`}>
+          <b>BULL</b>
+          {bull}
+        </span>
+        <span className={`vote-${bear.toLowerCase()}`}>
+          <b>BEAR</b>
+          {bear}
+        </span>
+        <span className={`vote-${zen.toLowerCase()}`}>
+          <b>ZEN</b>
+          {zen}
+        </span>
       </div>
       <div className="mini-confidence">
         <div className="mini-confidence__row">
           <span>Confidence</span>
-          <strong>{confidence}%</strong>
+          <strong>
+            <span className="mini-vote-split">{agreeing}/3 agree</span>
+            {confidence}%
+          </strong>
         </div>
         <div className="mini-confidence__track" aria-hidden="true">
           <span style={{ width: `${confidence}%` }} />

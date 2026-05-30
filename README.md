@@ -313,6 +313,28 @@ npm run dev -- -p 3001
 
 Open [http://localhost:3001](http://localhost:3001).
 
+### Validation and tests
+
+Frontend checks can be run on Windows, macOS, Linux, or WSL:
+
+```bash
+npm run typecheck
+npm run lint
+npm run build
+```
+
+Anchor/Solana SBF validation should be run from Linux or WSL2:
+
+```bash
+npm test
+```
+
+Native Windows can fail before Fornex tests execute with a Solana SBF/Rust path
+error under `target\sbf-solana-solana` while compiling `serde_core`. That is a
+local toolchain limitation, not a green or skipped Anchor result. See
+[`TESTING.md`](./TESTING.md) for the exact failure mode and recommended WSL2
+flow.
+
 ### Run the agent
 
 ```bash

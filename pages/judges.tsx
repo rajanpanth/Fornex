@@ -153,7 +153,7 @@ const faq: Array<{ q: string; a: React.ReactNode }> = [
         Stored, not hashed. Each <code>AgentVote</code> reserves 200 bytes
         for reasoning text, and every <code>MultiAgentDecision</code> PDA
         carries three of them - BULL, BEAR, ZEN - plus the consensus.
-        That's the wall on <Link href="/proof">/proof</Link>. Truncation is
+        That&apos;s the wall on <Link href="/proof">/proof</Link>. Truncation is
         documented in <code>agent/src/config.ts</code>.
       </>
     ),
@@ -162,7 +162,7 @@ const faq: Array<{ q: string; a: React.ReactNode }> = [
     q: "Why does the win-rate stat actually mean something?",
     a: (
       <>
-        It's derived from <code>record_trade_outcome</code>, which only
+        It&apos;s derived from <code>record_trade_outcome</code>, which only
         increments on closed positions with realized PnL. Deposits never
         count toward win-rate. The inception NAV is stamped on-chain at
         first deposit so every PnL number on the dashboard is anchored to a
@@ -402,14 +402,14 @@ function TreasuryCallout({ source }: { source: string }) {
         <span className="treasury-callout__chip">{label}</span>
         <span className="treasury-callout__title">
           The agent does not custody trading capital. The treasury does not
-          custody the agent's float.
+          custody the agent&apos;s float.
         </span>
       </header>
       <p>{body}</p>
       <ul>
         <li>
           <strong>Devnet</strong>: hot keypair signer · 0.001 SOL per executed
-          trade · audit by clicking the "pay.sh streamed" tile on{" "}
+          trade · audit by clicking the &quot;pay.sh streamed&quot; tile on{" "}
           <Link href="/app">/app</Link>.
         </li>
         <li>
