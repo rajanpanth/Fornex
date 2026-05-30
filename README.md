@@ -1,6 +1,15 @@
-<h1>
-  <img src="public/fornex-logo.png" alt="Fornex Protocol" width="160" />
-</h1>
+<table border="0" cellspacing="0" cellpadding="0">
+  <tr>
+    <td valign="middle" width="180">
+      <img src="public/fornex-logo.png" alt="Fornex Protocol" width="160" />
+    </td>
+    <td valign="middle">
+      <h1>Fornex</h1>
+      <strong>Non-custodial Solana vault run by three AI agents, with every risk cap enforced on-chain.</strong>
+    </td>
+  </tr>
+</table>
+
 
 **Autonomous, non-custodial AI trading vault on Solana.**
 
@@ -405,10 +414,6 @@ This is a devnet prototype.
 - `emergency_pause` halts trading and NAV updates but not deposits or withdrawals.
 - `signals.ts` reads Drift mainnet markets read-only because devnet markets have near-zero volume. Trading itself stays on devnet.
 - Devnet RPC throughput is rate-limited. The production deploy uses a Helius URL via `/api/rpc`.
-
-## Disclaimer
-
-This is a Solana devnet hackathon prototype. It is not audited, not deployed on mainnet, and not intended for real user funds. All transactions use devnet SOL with no real monetary value.
 
 ## License
 
