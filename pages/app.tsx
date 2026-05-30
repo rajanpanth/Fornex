@@ -306,15 +306,17 @@ export default function AppDashboard() {
             {solPrice.price > 0 && (() => {
               // Decide sign/arrow/color from the ROUNDED value so we never
               // render contradictions like "-0.0% ↓" (a tiny negative that
-              // rounds to zero). Treat values that round to 0.0 as flat.
-              const rounded = Number(solPrice.change.toFixed(1));
+              // rounds to zero). Use 2 decimals so small-but-real 24h moves
+              // (e.g. +0.03%) still show their true direction instead of
+              // collapsing to a flat 0.0%.
+              const rounded = Number(solPrice.change.toFixed(2));
               const dir = rounded > 0 ? "up" : rounded < 0 ? "down" : "flat";
               const arrow = rounded > 0 ? "↑" : rounded < 0 ? "↓" : "·";
               const sign = rounded > 0 ? "+" : "";
               return (
                 <span className={`topbar-pill ${dir}`}>
                   {sign}
-                  {Math.abs(rounded).toFixed(1)}% {arrow}
+                  {Math.abs(rounded).toFixed(2)}% {arrow}
                 </span>
               );
             })()}
