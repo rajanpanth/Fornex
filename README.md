@@ -386,7 +386,7 @@ The endpoint rejects any POST that does not present the secret. Payloads are san
 - pay.sh streaming micropayments on every executed trade
 - Inception NAV stamped on chain and honest win rate from realized PnL
 - Per-agent reputation computed on chain from decisions and closed-position PnL
-- 24/7 Dockerized agent on an Azure VM with auto-restart
+- The agent runs 24/7 under PM2 on an Azure VM, waking every 15 minutes and auto-restarting on crash or reboot.
 - Decision drawer with full reasoning trace, tamper hash, and consensus receipt
 - Live decision stream with auto-reconnect, and a risk dashboard rebuilt client-side from `NavRecord` history
 - Public read-only `@fornex/sdk` package
